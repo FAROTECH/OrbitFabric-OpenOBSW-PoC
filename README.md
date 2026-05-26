@@ -12,6 +12,8 @@ Instead of building a massive system, this PoC focuses on a minimal, end-to-end 
 3. Execute the contract on OpenOBSW (via Renode/STM32).
 4. Validate the loop in YAMCS via OpenSVF.
 
+👉 *For the deep-dive engineering details and PUS-C mappings, read the **[Mapping Concept & Vertical Slice Definition](docs/mapping_concept.md)**.*
+
 ## 📂 Repository Structure
 *   `/docs`: System engineering documents mapping the concepts.
 *   `/orbitfabric_models`: The raw mission models (The Contract).
