@@ -2,8 +2,8 @@
 
 ## 🚀 The Vision
 This repository is a Proof of Concept (PoC) demonstrating a full Model-Based Systems Engineering (MBSE) pipeline for spacecraft software validation. It acts as a bridge between:
-*   **[OrbitFabric](lien_vers_orbitfabric):** The model-first Mission Data Contract framework (The Single Source of Truth).
-*   **[OpenOBSW](lien_vers_votre_repo) & OpenSVF:** The flight-grade C11 execution stack and simulation ground segment.
+*   **[OrbitFabric](https://github.com/FAROTECH/orbitfabric-studio):** The model-first Mission Data Contract framework (The Single Source of Truth).
+*   **[OpenOBSW](https://github.com/lipofefeyt/openobsw) & [OpenSVF](https://github.com/lipofefeyt/openobsw):** The flight-grade C11 execution stack and simulation ground segment.
 
 ## 🎯 The Goal: The "Thin Vertical Slice"
 Instead of building a massive system, this PoC focuses on a minimal, end-to-end data flow:
