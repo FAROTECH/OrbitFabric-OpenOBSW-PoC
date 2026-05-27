@@ -1,0 +1,72 @@
+# OrbitFabric Mission Data Contract
+# PoC: Thin Vertical Slice
+#
+# This is the single source of truth for the three contracted data items.
+# The PoC adapter generates mission_contract.h (flight side) and an SRDB YAML
+# (ground side) from this file.
+#
+# NOTE: ID values marked "provisional" are pending alignment with the
+# OrbitFabric Core ID convention (tracked in issue #1).
+
+contract:
+  name: poc_vertical_slice
+  version: "0.1-poc"
+  c_prefix: "OF_"
+
+# ---------------------------------------------------------------------------
+# Telemetry
+# ---------------------------------------------------------------------------
+telemetry:
+  - name: obc_bus_voltage_mv
+    of_id: OF_TM_OBC_BUS_VOLTAGE_MV
+    of_id_value: 0x4001           # provisional
+    srdb_name: eps.obc.bus_voltage_mv
+    c_type: uint16_t
+    unit: mV
+    pus_service: 3
+    pus_subtype: 25               # TM[3,25] housekeeping parameter report
+    hk_set: obc_hk
+    sample_rate_hz: 1
+
+# ---------------------------------------------------------------------------
+# Housekeeping sets
+# ---------------------------------------------------------------------------
+housekeeping_sets:
+  - name: obc_hk
+    of_id: OF_HK_SET_OBC
+    sid: 0x01
+    collection_interval_s: 1
+    parameters:
+      - eps.obc.bus_voltage_mv
+
+# ---------------------------------------------------------------------------
+# Commands
+# ---------------------------------------------------------------------------
+commands:
+  - name: ping
+    of_id: OF_CMD_PING
+    of_id_value: 0x1701           # provisional
+    srdb_name: dhs.obc.ping
+    pus_service: 17
+    pus_subtype: 1                # TC[17,1] connection test
+    arguments: []
+    expected_responses:
+      - TM[1,1]                   # TC acceptance
+      - TM[1,7]                   # TC execution complete
+      - TM[17,2]                  # connection test response
+
+# ---------------------------------------------------------------------------
+# Events
+# ---------------------------------------------------------------------------
+events:
+  - name: voltage_out_of_bounds
+    of_id: OF_EVENT_VOLTAGE_OUT_OF_BOUNDS
+    of_id_value: 0x5001           # provisional
+    srdb_name: eps.obc.voltage_out_of_bounds
+    pus_service: 5
+    pus_subtype: 3                # TM[5,3] warning event
+    severity: warning
+    trigger:
+      parameter: eps.obc.bus_voltage_mv
+      condition: ">"
+      threshold_mv: 3500          # placeholder — to be confirmed
