@@ -20,7 +20,7 @@ The goal of this Proof of Concept (PoC) is to demonstrate a thin vertical slice 
 | **Command** | `obsw_tc_packet_t` dispatch target | XTCE `MetaCommand` / `ArgumentList` | Service 8 (Function Management) / S17 (Test) |
 | **Event / Fault** | Event Trigger function call | YAMCS Event / Alarm | Service 5 (Event Reporting) |
 | **Data Types** | C11 Types (`uint8_t`, `float`, etc.) | XTCE Data Encodings | PUS Standard Data Types |
-| **Mode / State** | Global State Machine (e.g., Safe, Nominal) | YAMCS System Variables (`/System/Mode`) | Mission Specific |
+| **Mode / State** | Context-scoped FSM (state carried via context pointer, e.g., Safe, Nominal) | YAMCS System Variables (`/System/Mode`) | Mission Specific |
 
 ## 4. The Thin Vertical Slice Definition
 To validate the interface without handling edge cases, the initial PoC will implement the following minimal dataset:
