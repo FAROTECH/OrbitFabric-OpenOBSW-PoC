@@ -5,14 +5,14 @@ This repository is a Proof of Concept (PoC) demonstrating a full Model-Based Sys
 *   **[OrbitFabric](https://github.com/FAROTECH/orbitfabric-studio):** The model-first Mission Data Contract framework (The Single Source of Truth).
 *   **[OpenOBSW](https://github.com/lipofefeyt/openobsw) & [OpenSVF](https://github.com/lipofefeyt/opensvf):** The flight-grade C11 execution stack and simulation ground segment.
 
-## 🎯 The Goal: The "Thin Vertical Slice"
+## The Goal: The "Thin Vertical Slice"
 Instead of building a massive system, this PoC focuses on a minimal, end-to-end data flow:
 1. Define a data contract in OrbitFabric (1 Telemetry, 1 Command, 1 Event).
 2. Generate C definitions (`.h`) for the flight software and XTCE databases for the ground segment.
 3. Execute the contract on OpenOBSW (via Renode/STM32).
 4. Validate the loop in YAMCS via OpenSVF.
 
-👉 *For the deep-dive engineering details and PUS-C mappings, read the **[Mapping Concept & Vertical Slice Definition](docs/mapping_concept.md)**.*
+*For the deep-dive engineering details and PUS-C mappings, read the **[Mapping Concept & Vertical Slice Definition](docs/mapping_concept.md)**.*
 
 ## Repository Structure & Data Flow
 
