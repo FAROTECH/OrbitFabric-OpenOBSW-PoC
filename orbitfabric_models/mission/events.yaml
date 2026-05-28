@@ -1,0 +1,14 @@
+events:
+  - id: obc.ping_requested
+    source: obc
+    severity: info
+    description: Ping command was accepted by the PoC command path.
+    downlink_priority: low
+    persistence: store
+
+  - id: eps.voltage_out_of_bounds
+    source: eps
+    severity: warning
+    description: OBC bus voltage exceeded the PoC warning threshold.
+    downlink_priority: high
+    persistence: store_and_downlink

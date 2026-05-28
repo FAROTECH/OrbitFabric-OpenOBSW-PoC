@@ -1,0 +1,7 @@
+spacecraft:
+  id: opensvf-openobsw-poc
+  name: OrbitFabric OpenOBSW OpenSVF PoC
+  class: cubesat
+  form_factor: 1U
+  mission_type: technology_demonstrator
+  model_version: 0.1.0

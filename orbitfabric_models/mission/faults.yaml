@@ -1,0 +1,15 @@
+faults:
+  - id: eps.voltage_out_of_bounds_fault
+    source: eps
+    severity: warning
+    description: OBC bus voltage exceeds the PoC warning threshold for three consecutive samples.
+    condition:
+      telemetry: eps.obc.bus_voltage_mv
+      operator: ">"
+      value: 3500
+      debounce_samples: 3
+    emits:
+      - eps.voltage_out_of_bounds
+    recovery:
+      mode_transition: SAFE
+      auto_commands: []

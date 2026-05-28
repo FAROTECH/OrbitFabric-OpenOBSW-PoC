@@ -1,0 +1,9 @@
+packets:
+  - id: obc_hk
+    name: OBC Housekeeping Packet
+    type: json
+    max_payload_bytes: 256
+    period: 1s
+    telemetry:
+      - eps.obc.bus_voltage_mv
+    description: Minimal housekeeping packet carrying the PoC OBC bus voltage telemetry.

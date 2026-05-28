@@ -1,0 +1,16 @@
+telemetry:
+  - id: eps.obc.bus_voltage_mv
+    name: OBC Bus Voltage
+    type: uint16
+    unit: mV
+    source: eps
+    sampling: 1Hz
+    criticality: high
+    persistence: store_and_downlink
+    downlink_priority: high
+    limits:
+      warning_high: 3500
+    quality:
+      required: true
+      default: good
+    description: Minimal PoC telemetry parameter representing the OBC bus voltage in raw millivolts.
