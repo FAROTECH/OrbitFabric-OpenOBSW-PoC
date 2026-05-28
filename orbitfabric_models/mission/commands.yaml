@@ -1,0 +1,15 @@
+commands:
+  - id: obc.ping
+    target: obc
+    description: Minimal PoC command used to validate the command path through the OpenOBSW/OpenSVF integration.
+    arguments: []
+    allowed_modes:
+      - NOMINAL
+      - SAFE
+    requires_ack: true
+    timeout_ms: 500
+    risk: low
+    emits:
+      - obc.ping_requested
+    expected_effects:
+      no_state_change: true

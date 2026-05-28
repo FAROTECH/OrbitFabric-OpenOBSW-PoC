@@ -1,0 +1,12 @@
+subsystems:
+  - id: obc
+    name: On-Board Computer
+    type: core
+    criticality: critical
+    description: Minimal onboard computer domain used by the PoC command path.
+
+  - id: eps
+    name: Electrical Power System
+    type: subsystem
+    criticality: critical
+    description: Minimal power domain used by the PoC housekeeping telemetry and voltage event.
