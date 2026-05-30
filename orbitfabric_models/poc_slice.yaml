@@ -1,9 +1,10 @@
 # OrbitFabric Mission Data Contract
 # PoC: Thin Vertical Slice
 #
-# This is the single source of truth for the three contracted data items.
-# The PoC adapter generates mission_contract.h (flight side) and an SRDB YAML
-# (ground side) from this file.
+# This file is the PoC mapping/allocation layer for the validated
+# OrbitFabric Core Mission Model in orbitfabric_models/mission/.
+# The PoC adapter combines both inputs to generate mission_contract.h
+# (flight side) and an SRDB YAML (ground side).
 #
 # NOTE: ID values marked "provisional" are pending alignment with the
 # OrbitFabric Core ID convention (tracked in issue #1).
@@ -69,4 +70,4 @@ events:
     trigger:
       parameter: eps.obc.bus_voltage_mv
       condition: ">"
-      threshold_mv: 3500          # placeholder — to be confirmed
+      threshold_mv: 3500          # placeholder, to be confirmed
