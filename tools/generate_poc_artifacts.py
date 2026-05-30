@@ -135,6 +135,64 @@ def format_c_unsigned(value):
     return "{0}u".format(value)
 
 
+def format_yaml_hex(value):
+    if not isinstance(value, integer_types):
+        raise SystemExit("Expected integer value, got: {0!r}".format(value))
+    return "0x{0:X}".format(value)
+
+
+def opensvf_dtype_for_mission_type(mission_type):
+    if mission_type == "uint16":
+        return "int"
+    raise SystemExit(
+        "Unsupported Mission Model telemetry type for OpenSVF SRDB: {0}".format(
+            mission_type
+        )
+    )
+
+
+def opensvf_domain_for_source(source):
+    mapping = {
+        "eps": "EPS",
+        "aocs": "AOCS",
+        "ttc": "TTC",
+        "obdh": "OBDH",
+        "thermal": "THERMAL",
+    }
+    if source not in mapping:
+        raise SystemExit(
+            "Unsupported Mission Model telemetry source for OpenSVF SRDB: {0}".format(
+                source
+            )
+        )
+    return mapping[source]
+
+
+def opensvf_apid_for_domain(domain):
+    mapping = {
+        "EPS": 0x100,
+        "AOCS": 0x101,
+        "TTC": 0x102,
+        "OBDH": 0x103,
+        "THERMAL": 0x104,
+    }
+    if domain not in mapping:
+        raise SystemExit(
+            "Unsupported OpenSVF domain for APID mapping: {0}".format(domain)
+        )
+    return mapping[domain]
+
+
+def opensvf_valid_range_for_mission_type(mission_type):
+    if mission_type == "uint16":
+        return [0.0, 65535.0]
+    raise SystemExit(
+        "Unsupported Mission Model telemetry type for OpenSVF valid_range: {0}".format(
+            mission_type
+        )
+    )
+
+
 def find_by_id(entries, identifier):
     for entry in entries:
         if entry.get("id") == identifier:
@@ -329,11 +387,7 @@ def render_header(poc_slice, validated):
 
 
 def render_srdb(poc_slice, validated):
-    contract = require_mapping(poc_slice, "contract")
     telemetry = validated["telemetry_map"]
-    commands = validated["commands_map"]
-    events = validated["events_map"]
-    hk_sets = validated["hk_sets_map"]
 
     telemetry_model_by_id = {}
     for item in validated["telemetry_model"]:
@@ -349,79 +403,35 @@ def render_srdb(poc_slice, validated):
         "#   orbitfabric_models/mission/",
         "#   orbitfabric_models/poc_slice.yaml",
         "#",
-        "# This file is the first PoC SRDB projection for OpenSVF/YAMCS ingestion.",
-        "",
-        "database:",
-        "  name: {0}".format(contract["name"]),
-        "  version: \"{0}\"".format(contract["version"]),
+        "# OpenSVF-native SRDB artifact.",
         "",
         "parameters:",
     ]
 
     for item in telemetry:
         semantic = telemetry_model_by_id[item["srdb_name"]]
+        domain = opensvf_domain_for_source(semantic["source"])
+        dtype = opensvf_dtype_for_mission_type(semantic["type"])
+        valid_range = opensvf_valid_range_for_mission_type(semantic["type"])
+        apid = opensvf_apid_for_domain(domain)
+
         lines.extend([
-            "  - name: {0}".format(item["srdb_name"]),
-            "    semantic_id: {0}".format(semantic["id"]),
+            "  {0}:".format(item["srdb_name"]),
             "    description: {0}".format(semantic["description"]),
-            "    type: {0}".format(semantic["type"]),
-            "    c_type: {0}".format(item["c_type"]),
             "    unit: {0}".format(item["unit"]),
-            "    source: {0}".format(semantic["source"]),
+            "    dtype: {0}".format(dtype),
+            "    classification: TM",
+            "    domain: {0}".format(domain),
+            "    model_id: {0}".format(semantic["source"]),
+            "    valid_range: [{0:.1f}, {1:.1f}]".format(
+                valid_range[0],
+                valid_range[1],
+            ),
             "    pus:",
+            "      apid: {0}".format(format_yaml_hex(apid)),
             "      service: {0}".format(item["pus_service"]),
-            "      subtype: {0}".format(item["pus_subtype"]),
-            "    housekeeping:",
-            "      set: {0}".format(item["hk_set"]),
-            "      sample_rate_hz: {0}".format(item["sample_rate_hz"]),
-            "    limits:",
-            "      warning_high: {0}".format(semantic["limits"]["warning_high"]),
-        ])
-
-    lines.extend(["", "housekeeping:"])
-    for item in hk_sets:
-        lines.extend([
-            "  - name: {0}".format(item["name"]),
-            "    of_id: {0}".format(item["of_id"]),
-            "    sid: {0}".format(format_c_integer(item["sid"])),
-            "    collection_interval_s: {0}".format(item["collection_interval_s"]),
-            "    parameters:",
-        ])
-        for parameter in item["parameters"]:
-            lines.append("      - {0}".format(parameter))
-
-    lines.extend(["", "commands:"])
-    for item in commands:
-        lines.extend([
-            "  - name: {0}".format(item["srdb_name"]),
-            "    semantic_id: {0}".format(item["semantic_id"]),
-            "    of_id: {0}".format(item["of_id"]),
-            "    of_id_value: {0}".format(format_c_integer(item["of_id_value"])),
-            "    pus:",
-            "      service: {0}".format(item["pus_service"]),
-            "      subtype: {0}".format(item["pus_subtype"]),
-            "    arguments: []",
-            "    expected_responses:",
-        ])
-        for response in item["expected_responses"]:
-            lines.append("      - \"{0}\"".format(response))
-
-    lines.extend(["", "events:"])
-    for item in events:
-        trigger = item["trigger"]
-        lines.extend([
-            "  - name: {0}".format(item["srdb_name"]),
-            "    semantic_id: {0}".format(item["semantic_id"]),
-            "    of_id: {0}".format(item["of_id"]),
-            "    of_id_value: {0}".format(format_c_integer(item["of_id_value"])),
-            "    severity: {0}".format(item["severity"]),
-            "    pus:",
-            "      service: {0}".format(item["pus_service"]),
-            "      subtype: {0}".format(item["pus_subtype"]),
-            "    trigger:",
-            "      parameter: {0}".format(trigger["parameter"]),
-            "      condition: \"{0}\"".format(trigger["condition"]),
-            "      threshold_mv: {0}".format(trigger["threshold_mv"]),
+            "      subservice: {0}".format(item["pus_subtype"]),
+            "      parameter_id: {0}".format(format_yaml_hex(item["of_id_value"])),
         ])
 
     lines.append("")
