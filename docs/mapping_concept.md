@@ -1,67 +1,312 @@
-# OrbitFabric <-> OpenOBSW / OpenSVF : Integration Concept & Mapping
+# OrbitFabric ↔ OpenOBSW / OpenSVF Integration Concept & Mapping
 
 ## 1. Introduction and Scope
-This document outlines the conceptual mapping and integration strategy between **OrbitFabric** and the **OpenOBSW / OpenSVF** execution stack. 
 
-The goal of this Proof of Concept (PoC) is to demonstrate a thin vertical slice of an MBSE workflow: using a single source of truth to generate flight-ready C11 artifacts, ground-segment databases, and validate a closed-loop execution.
+This document defines the conceptual mapping and integration boundary between OrbitFabric Core and the OpenOBSW/OpenSVF execution stack.
 
-## 2. High-Level Data Flow
-1. **Mission Definition:** Data contracts (Telemetry, Commands, Events) are defined in OrbitFabric Core (`orbitfabric_models/`).
-2. **Artifact Generation (via PoC adapter):**
-   * **Flight side:** OrbitFabric generates `mission_contract.h` — a C11 contract header containing stable IDs (enums), housekeeping payload structs, and command argument structs. No runtime logic, no PUS framing, no transport.
-   * **Ground side:** OrbitFabric generates an SRDB YAML. OpenSVF's existing `generate_xtce.py` tooling then produces the YAMCS XTCE MDB from that YAML. OrbitFabric Core does not emit XTCE directly.
-3. **Execution:** OpenOBSW (Renode or host simulation first; STM32 bare-metal once the contract boundary is stable) consumes `mission_contract.h` and runs the contracted telemetry, command, and event logic.
-4. **Validation:** OpenSVF drives the closed-loop campaign; YAMCS receives TM, issues TC, and triggers alarms based on the SRDB-derived XTCE MDB.
+The PoC demonstrates a thin vertical slice of an MBSE workflow:
 
-## 3. Conceptual Mapping Dictionary
+```text
+OrbitFabric Core Mission Model
+-> OrbitFabric lint validation
+-> PoC adapter / mapping layer
+-> generated flight-side contract
+-> generated ground-side database artifact
+-> OpenOBSW execution
+-> OpenSVF/YAMCS validation and visibility
+```
 
-| OrbitFabric Concept | OpenOBSW (Flight Stack - C11) | OpenSVF / YAMCS (Ground Segment) | PUS-C Service Mapping |
+The PoC is intentionally narrow. It is meant to prove the contract continuity chain, not to model a complete spacecraft mission.
+
+## 2. Architectural Boundary
+
+OrbitFabric Core remains the semantic Mission Data Contract authority.
+
+OrbitFabric Core owns mission-level concepts such as:
+
+* telemetry parameters;
+* commands;
+* events;
+* faults;
+* modes;
+* packets;
+* data products;
+* policies.
+
+OpenOBSW and OpenSVF remain execution and verification environments.
+
+The PoC adapter consumes:
+
+```text
+orbitfabric_models/mission/
+orbitfabric_models/poc_slice.yaml
+```
+
+and generates ecosystem-facing artifacts.
+
+OrbitFabric Core itself does not become dependent on OpenOBSW, OpenSVF, YAMCS, XTCE, or PUS-specific tooling.
+
+## 3. Source Model vs PoC Mapping Layer
+
+The PoC uses two distinct inputs.
+
+### 3.1 OrbitFabric Core Mission Model
+
+```text
+orbitfabric_models/mission/
+```
+
+This is the semantic source model validated by OrbitFabric Core.
+
+It contains the OrbitFabric-compatible mission YAML files:
+
+* `spacecraft.yaml`
+* `subsystems.yaml`
+* `modes.yaml`
+* `telemetry.yaml`
+* `commands.yaml`
+* `events.yaml`
+* `faults.yaml`
+* `packets.yaml`
+* `policies.yaml`
+
+Validation command:
+
+```bash
+orbitfabric lint orbitfabric_models/mission/
+```
+
+### 3.2 PoC Mapping / Allocation Layer
+
+```text
+orbitfabric_models/poc_slice.yaml
+```
+
+This file is PoC-specific.
+
+It maps the semantic OrbitFabric model to integration-specific details, including:
+
+* `OF_` C identifiers;
+* provisional numeric allocation values;
+* SRDB canonical names;
+* PUS service/subservice mapping;
+* housekeeping set metadata.
+
+Numeric values such as:
+
+```text
+0x4001
+0x1701
+0x5001
+```
+
+are PoC adapter allocation values.
+
+They are not OrbitFabric Core-stable semantic identifiers.
+
+## 4. High-Level Data Flow
+
+1. **Mission Definition**
+
+   Mission semantics are defined in `orbitfabric_models/mission/`.
+
+2. **Validation**
+
+   The Mission Model is validated with OrbitFabric Core.
+
+3. **Artifact Generation via PoC Adapter**
+
+   The adapter consumes the validated Mission Model and the PoC mapping/allocation file.
+
+   Flight side:
+
+   ```text
+   generated_artifacts/flight_software/mission_contract.h
+   ```
+
+   Ground side:
+
+   ```text
+   generated_artifacts/ground_segment/poc_srdb.yaml
+   ```
+
+4. **OpenSVF/YAMCS Database Generation**
+
+   OpenSVF remains responsible for generating or assisting the XTCE/YAMCS MDB from OpenSVF-compatible SRDB input.
+
+5. **OpenOBSW Execution**
+
+   OpenOBSW consumes the flight-side contract and runs the contracted command, telemetry, and event behavior.
+
+6. **Validation and Evidence**
+
+   OpenSVF/YAMCS validate command execution, telemetry visibility, and event/alarm behavior.
+
+## 5. Conceptual Mapping Dictionary
+
+| OrbitFabric Concept | OpenOBSW Flight Stack | OpenSVF / YAMCS Ground Segment | PUS-C Mapping |
 | :--- | :--- | :--- | :--- |
-| **Telemetry Parameter** | `struct` member / Variable exposed to HAL | XTCE `Parameter` / `SequenceContainer` | Service 3 (Housekeeping) |
-| **Command** | `obsw_tc_packet_t` dispatch target | XTCE `MetaCommand` / `ArgumentList` | Service 8 (Function Management) / S17 (Test) |
-| **Event / Fault** | Event Trigger function call | YAMCS Event / Alarm | Service 5 (Event Reporting) |
-| **Data Types** | C11 Types (`uint8_t`, `float`, etc.) | XTCE Data Encodings | PUS Standard Data Types |
-| **Mode / State** | Context-scoped FSM (state carried via context pointer, e.g., Safe, Nominal) | YAMCS System Variables (`/System/Mode`) | Mission Specific |
+| Telemetry Parameter | Struct member or registered HK parameter | SRDB parameter / XTCE parameter | Service 3 housekeeping |
+| Command | TC dispatch target | XTCE MetaCommand / command path | Service 17 for ping, Service 8 for future function management |
+| Event / Fault | Event trigger or FDIR condition | YAMCS event/alarm visibility | Service 5 event reporting when physically materialized |
+| Packet | HK set or payload shape | XTCE SequenceContainer | Service 3 packet/report structure |
+| Mode / State | OpenOBSW FSM/context | YAMCS system variable or event stream | Mission-specific |
 
-## 4. The Thin Vertical Slice Definition
-To validate the interface without handling edge cases, the initial PoC will implement the following minimal dataset:
+## 6. Thin Vertical Slice Definition
 
-### 4.1. Telemetry (TM)
-* **Contract name:** `obc_bus_voltage_mv`
-* **Type:** `uint16_t` — raw millivolts. Engineering conversion (scaling, units, limits) lives in the SRDB/YAMCS layer, not in the flight header.
-* **Behavior:** Sampled at 1 Hz, packed into a PUS Service 3 TM[3,25] housekeeping report (HK set `obc_hk`, SID `0x01`).
-* **SRDB canonical name:** `eps.obc.bus_voltage_mv`
+The initial slice contains:
 
-### 4.2. Telecommand (TC)
-* **Contract name:** `ping`
-* **Target:** PUS Service 17 TC[17,1] (Connection Test). Chosen for the first slice for its minimal dispatch complexity.
-* **Behavior:** Issued from YAMCS, routed through OpenSVF, processed by OpenOBSW. Expected response chain: TM[1,1] (acceptance) → TM[1,7] (execution complete) → TM[17,2] (connection test response).
-* **SRDB canonical name:** `dhs.obc.ping`
-* **Note:** `toggle_status_led` / Service 8 (Function Management) is the natural next command once the S17 path is proven.
+### 6.1 Telemetry
 
-### 4.3. Event
-* **Contract name:** `voltage_out_of_bounds`
-* **Trigger:** `obc_bus_voltage_mv` exceeds threshold (placeholder: 3500 mV — to be confirmed).
-* **Target:** OpenOBSW generates PUS Service 5 TM[5,3] (Warning Event), which triggers a YAMCS alarm state.
-* **SRDB canonical name:** `eps.obc.voltage_out_of_bounds`
+OrbitFabric semantic ID:
 
-## 5. Way Forward
+```text
+eps.obc.bus_voltage_mv
+```
 
-Settled decisions (from [issue #1](https://github.com/lipofefeyt/OrbitFabric-OpenOBSW-PoC/issues/1)):
+PoC contract name:
+
+```text
+obc_bus_voltage_mv
+```
+
+Type:
+
+```text
+uint16 / uint16_t
+```
+
+Meaning:
+
+```text
+Raw millivolts
+```
+
+Behavior:
+
+```text
+Sampled at 1 Hz and carried in the `obc_hk` housekeeping packet.
+```
+
+PUS target:
+
+```text
+TM[3,25] housekeeping report
+```
+
+SRDB canonical name:
+
+```text
+eps.obc.bus_voltage_mv
+```
+
+### 6.2 Command
+
+OrbitFabric semantic ID:
+
+```text
+obc.ping
+```
+
+PoC contract name:
+
+```text
+ping
+```
+
+PUS target:
+
+```text
+TC[17,1] connection test
+```
+
+Expected OpenOBSW response chain:
+
+```text
+TM[1,1] acceptance
+TM[17,2] connection test response
+TM[1,7] execution completion
+```
+
+### 6.3 Event / Fault
+
+OrbitFabric semantic event:
+
+```text
+eps.voltage_out_of_bounds
+```
+
+Fault condition:
+
+```text
+eps.obc.bus_voltage_mv > 3500
+```
+
+PUS target:
+
+```text
+TM[5,3] warning event
+```
+
+SRDB canonical name:
+
+```text
+eps.obc.voltage_out_of_bounds
+```
+
+## 7. Semantic Events vs Physical PUS Events
+
+Not every OrbitFabric event should automatically become a physical PUS Service 5 event.
+
+Example:
+
+```text
+obc.ping_requested
+```
+
+can remain a semantic event inside the OrbitFabric model.
+
+The PUS command path already provides:
+
+```text
+TM[1,1] acceptance
+TM[1,7] completion
+TM[17,2] connection test response
+```
+
+Generating an additional physical TM[5,x] event for every ping would be redundant for this PoC.
+
+By contrast:
+
+```text
+eps.voltage_out_of_bounds
+```
+
+has operational meaning and can be materialized as a PUS Service 5 warning event.
+
+The adapter should preserve meaning. It should not blindly materialize every semantic concept onto the wire.
+
+## 8. Settled Decisions
 
 | Decision | Resolution |
-|:---|:---|
-| `mission_contract.h` role | Contract-only header: IDs (enums), HK payload struct, command argument structs. No runtime logic, no PUS framing. |
+| :--- | :--- |
+| OrbitFabric entry point | OrbitFabric Core |
+| Studio dependency | Not part of the PoC pipeline |
+| Core role | Semantic Mission Data Contract authority |
+| Adapter role | Projection/mapping layer from Core model to ecosystem artifacts |
+| `mission_contract.h` role | Contract-only C11 header |
 | C prefix | `OF_` |
-| Ground artifact path | OrbitFabric → SRDB YAML → OpenSVF `generate_xtce.py` → YAMCS XTCE MDB |
-| First execution target | OpenOBSW host simulation or Renode; STM32 bare-metal deferred |
-| OrbitFabric entry point | OrbitFabric Core (`github.com/FAROTECH/orbitfabric`); Studio is not a PoC dependency |
+| Numeric IDs | PoC adapter allocation values, not Core semantic truth |
+| Ground artifact path | PoC adapter -> OpenSVF-compatible SRDB -> OpenSVF XTCE/YAMCS MDB |
+| First execution target | OpenOBSW host simulation or Renode |
+| STM32/bare-metal | Deferred until the contract boundary is stable |
 
-**Pending (blocking `mission_contract.h` generation):**
-- Confirmation from OrbitFabric Core on whether the proposed ID ranges (`0x4001` / `0x1701` / `0x5001`) match an existing convention or need to be redefined.
+## 9. Immediate Next Steps
 
-**Next steps once IDs are confirmed:**
-1. Generate `generated_artifacts/flight_software/mission_contract.h` from `orbitfabric_models/poc_slice.yaml`.
-2. Generate `generated_artifacts/ground_segment/poc_srdb.yaml` and run OpenSVF's `generate_xtce.py` to produce the YAMCS MDB.
-3. Wire `obc_bus_voltage_mv` into OpenOBSW's S3 HK report and the `ping` dispatcher into S17.
-4. Run the OpenSVF closed-loop campaign against the Renode/host-sim target.
+1. Align documentation after the Core mission slice merge.
+2. Implement the PoC adapter/generation prototype.
+3. Generate `mission_contract.h`.
+4. Generate OpenSVF-compatible SRDB YAML.
+5. Validate SRDB ingestion and XTCE/YAMCS MDB generation.
+6. Wire the generated flight contract into OpenOBSW.
+7. Run the first closed-loop validation campaign.
