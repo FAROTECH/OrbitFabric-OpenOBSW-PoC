@@ -81,3 +81,19 @@ The smoke test sends TC(17,1) through the OpenOBSW host-sim type-frame protocol 
   TM(1,7)
 
 This validates the minimal command-side path. It does not run YAMCS and does not introduce OpenOBSW telemetry or event runtime mapping.
+
+## Stage 4.4 unified PoC pipeline validation
+
+The PoC can now run the complete local validation chain through a single wrapper:
+
+    python3 tools/validate_poc_pipeline.py --opensvf-repo ../opensvf --openobsw-repo ../openobsw --clean
+
+The wrapper runs the existing generation and validation steps in sequence:
+
+    python3 tools/generate_poc_artifacts.py
+    python3 tools/validate_opensvf_srdb_xtce.py --opensvf-repo ../opensvf
+    python3 tools/generate_poc_xtce_mdb.py --opensvf-repo ../opensvf
+    python3 tools/validate_openobsw_contract_adapter.py --openobsw-repo ../openobsw --clean
+    python3 tools/validate_openobsw_ping_smoke.py
+
+This stage only unifies local validation. It does not introduce a YAMCS runtime campaign, Renode setup, Docker workflow, CI workflow, telemetry runtime mapping, event runtime mapping, or housekeeping runtime mapping.
