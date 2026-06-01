@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -53,6 +54,7 @@ def configure_build_test(
         str(openobsw_repo),
         "-B",
         str(build_dir),
+        f"-DPython3_EXECUTABLE={sys.executable}",
         "-DOBSW_BUILD_TESTS=ON",
         "-DOBSW_BUILD_SIM=ON",
     ]
