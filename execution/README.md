@@ -44,3 +44,19 @@ Then generate the local MDB:
 This directory does not yet contain a YAMCS runtime campaign, Renode setup, Docker workflow, CI workflow, or OpenOBSW runtime execution evidence.
 
 Those belong to later stages.
+
+## Stage 4.2 OpenOBSW contract adapter validation
+
+The PoC can validate the OpenOBSW optional OrbitFabric contract adapter from this workspace.
+
+First regenerate the PoC artifacts:
+
+  python3 tools/generate_poc_artifacts.py
+
+Then validate the OpenOBSW default and OrbitFabric-enabled host-sim builds:
+
+  python3 tools/validate_openobsw_contract_adapter.py --openobsw-repo ../openobsw --clean
+
+The validation wrapper checks that OpenOBSW still builds and tests normally with the adapter disabled, and that the generated mission_contract.h can be consumed when the adapter is enabled.
+
+This does not execute a YAMCS runtime campaign and does not introduce OpenOBSW telemetry/event runtime mapping.
