@@ -123,3 +123,5 @@ The generated evidence is intentionally local and ignored by Git:
     execution/evidence/poc_ping_closed_loop_evidence.json
 
 This does not execute YAMCS, Renode, Docker, CI, telemetry runtime mapping, event runtime mapping, or housekeeping runtime mapping.
+
+The Stage 5 evidence bundle also records local provenance and SHA-256 hashes for the campaign descriptor and generated artifacts, so the evidence can be traced to a specific repository state and artifact set.

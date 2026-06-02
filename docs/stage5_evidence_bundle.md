@@ -52,3 +52,26 @@ This stage still remains local PoC evidence capture only.
 It does not claim closed-loop YAMCS runtime execution.
 
 It prepares the evidence structure that a future OpenSVF/YAMCS campaign can populate with real runtime campaign results.
+
+## Stage 5.2 provenance
+
+The evidence bundle also records provenance data:
+
+    repository root
+    Python executable
+    Python version
+    platform
+    Git branch
+    Git HEAD
+    short Git status
+    dirty/clean repository flag
+    artifact size and SHA-256 hashes
+
+The hashed artifacts are:
+
+    execution/campaigns/poc_ping_closed_loop.yaml
+    generated_artifacts/flight_software/mission_contract.h
+    generated_artifacts/ground_segment/poc_srdb.yaml
+    execution/generated/poc_xtce_mdb.xml
+
+This makes the local evidence traceable to a specific repository state and generated artifact set.

@@ -8,14 +8,17 @@ It captures local evidence for the current PoC validation boundary by running:
 1. Stage 5 campaign descriptor validation.
 2. Full OrbitFabric/OpenOBSW PoC pipeline validation.
 
-The generated evidence JSON is intentionally local execution evidence.
+It also records local provenance and artifact hashes so the evidence can be
+traced back to a specific repository state and generated artifact set.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import platform
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -24,6 +27,69 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPO_ROOT / "execution" / "evidence" / "poc_ping_closed_loop_evidence.json"
+
+HASHED_ARTIFACTS = [
+    "execution/campaigns/poc_ping_closed_loop.yaml",
+    "generated_artifacts/flight_software/mission_contract.h",
+    "generated_artifacts/ground_segment/poc_srdb.yaml",
+    "execution/generated/poc_xtce_mdb.xml",
+]
+
+
+def run_git(command: list[str]) -> str:
+    proc = subprocess.run(
+        ["git", *command],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return proc.stderr.strip()
+    return proc.stdout.strip()
+
+
+def file_sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+    return digest.hexdigest()
+
+
+def artifact_record(relative_path: str) -> dict:
+    path = REPO_ROOT / relative_path
+
+    return {
+        "path": relative_path,
+        "exists": path.is_file(),
+        "size_bytes": path.stat().st_size if path.is_file() else None,
+        "sha256": file_sha256(path),
+    }
+
+
+def collect_provenance() -> dict:
+    status_short = run_git(["status", "--short"])
+
+    return {
+        "repo_root": str(REPO_ROOT),
+        "python_executable": sys.executable,
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "git": {
+            "branch": run_git(["rev-parse", "--abbrev-ref", "HEAD"]),
+            "head": run_git(["rev-parse", "HEAD"]),
+            "head_short": run_git(["rev-parse", "--short", "HEAD"]),
+            "status_short": status_short,
+            "dirty": bool(status_short),
+        },
+        "artifacts": [artifact_record(path) for path in HASHED_ARTIFACTS],
+    }
 
 
 def run_capture(command: list[str]) -> dict:
@@ -134,7 +200,7 @@ def main() -> int:
 
     evidence = {
         "evidence_id": "poc_ping_closed_loop_evidence",
-        "stage": "5.1",
+        "stage": "5.2",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "campaign_descriptor": "execution/campaigns/poc_ping_closed_loop.yaml",
         "scope": {
@@ -147,6 +213,7 @@ def main() -> int:
             "housekeeping_runtime_mapping": False,
         },
         "steps": steps,
+        "provenance": collect_provenance(),
         "passed": passed,
     }
 
