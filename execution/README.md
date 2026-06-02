@@ -111,3 +111,15 @@ Validate the descriptor with:
 This stage does not execute YAMCS, Renode, Docker, CI, OpenOBSW telemetry runtime mapping, OpenOBSW event runtime mapping, or housekeeping runtime mapping.
 
 It only makes the next closed-loop OpenSVF/YAMCS campaign boundary explicit and machine-checkable.
+
+## Stage 5.1 local evidence bundle
+
+The current Stage 5 campaign boundary can produce a local machine-readable evidence bundle:
+
+    python3 tools/generate_stage5_evidence_bundle.py --opensvf-repo ../opensvf --openobsw-repo ../openobsw --clean
+
+The generated evidence is intentionally local and ignored by Git:
+
+    execution/evidence/poc_ping_closed_loop_evidence.json
+
+This does not execute YAMCS, Renode, Docker, CI, telemetry runtime mapping, event runtime mapping, or housekeeping runtime mapping.

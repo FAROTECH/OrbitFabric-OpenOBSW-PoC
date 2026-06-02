@@ -1,3 +1,6 @@
 __pycache__/
 *.py[cod]
 execution/generated/
+
+# Local Stage 5 execution evidence
+execution/evidence/
