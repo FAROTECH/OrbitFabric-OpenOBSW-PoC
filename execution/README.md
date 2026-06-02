@@ -97,3 +97,17 @@ The wrapper runs the existing generation and validation steps in sequence:
     python3 tools/validate_openobsw_ping_smoke.py
 
 This stage only unifies local validation. It does not introduce a YAMCS runtime campaign, Renode setup, Docker workflow, CI workflow, telemetry runtime mapping, event runtime mapping, or housekeeping runtime mapping.
+
+## Stage 5.0 closed-loop campaign boundary
+
+The next planned validation boundary is recorded as a campaign descriptor:
+
+    execution/campaigns/poc_ping_closed_loop.yaml
+
+Validate the descriptor with:
+
+    python3 tools/validate_stage5_campaign_plan.py
+
+This stage does not execute YAMCS, Renode, Docker, CI, OpenOBSW telemetry runtime mapping, OpenOBSW event runtime mapping, or housekeeping runtime mapping.
+
+It only makes the next closed-loop OpenSVF/YAMCS campaign boundary explicit and machine-checkable.
