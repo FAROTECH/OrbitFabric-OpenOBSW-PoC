@@ -1,0 +1,53 @@
+discovery_id: poc_runtime_campaign_discovery
+stage: "6.0"
+status: planned
+description: >
+  Runtime discovery descriptor for the next OrbitFabric/OpenOBSW/OpenSVF PoC stage.
+  This stage identifies the information required before implementing a closed-loop
+  OpenSVF/YAMCS runtime campaign.
+
+baseline_inputs:
+  campaign_descriptor: execution/campaigns/poc_ping_closed_loop.yaml
+  evidence_bundle_generator: tools/generate_stage5_evidence_bundle.py
+  xtce_mdb: execution/generated/poc_xtce_mdb.xml
+  srdb: generated_artifacts/ground_segment/poc_srdb.yaml
+  flight_contract: generated_artifacts/flight_software/mission_contract.h
+  openobsw_host_sim: ../openobsw/build_stage4_orbitfabric/sim/obsw_sim
+
+runtime_questions:
+  yamcs:
+    - how_to_load_generated_xtce_mdb
+    - how_to_configure_local_instance
+    - how_to_observe_tm_1_1_tm_17_2_tm_1_7
+    - how_to_expose_command_injection_path
+  opensvf:
+    - how_to_reference_generated_xtce_mdb
+    - how_to_model_tc_17_1_campaign_step
+    - how_to_collect_runtime_evidence
+  openobsw:
+    - how_to_connect_host_sim_to_ground_runtime
+    - whether_type_frame_protocol_can_be_bridged_directly
+    - whether_a_poc_bridge_process_is_needed
+
+first_runtime_experiment:
+  goal: >
+    Load the generated XTCE/YAMCS MDB into a local ground runtime and verify that
+    the current ping command path can be represented before implementing full
+    command injection.
+  expected_visibility:
+    - eps_obc_bus_voltage_mv
+    - TM_3_25_HK
+    - TC_17_1_or_equivalent_ping_command_path
+    - TM_1_1
+    - TM_17_2
+    - TM_1_7
+
+current_boundary:
+  yamcs_runtime_execution: false
+  command_injection_runtime: false
+  telemetry_runtime_observation: false
+  renode_execution: false
+  docker_workflow: false
+  ci_workflow: false
+  openobsw_proper_changes: false
+  opensvf_proper_changes: false
