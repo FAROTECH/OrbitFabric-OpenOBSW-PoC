@@ -200,7 +200,9 @@ def main() -> int:
 
     evidence = {
         "evidence_id": "poc_ping_closed_loop_evidence",
-        "stage": "5.2",
+        "stage": "5.0",
+        "campaign_stage": "5.0",
+        "evidence_bundle_version": "5.2",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "campaign_descriptor": "execution/campaigns/poc_ping_closed_loop.yaml",
         "scope": {
