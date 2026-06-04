@@ -1,0 +1,55 @@
+campaign_id: poc_ping_closed_loop
+stage: "5.0"
+status: planned
+description: >
+  Planned closed-loop validation campaign for the OrbitFabric/OpenOBSW/OpenSVF PoC.
+  This descriptor records the intended campaign boundary after the Stage 4 command-path
+  smoke validation.
+
+inputs:
+  mission_model_dir: orbitfabric_models/mission
+  mapping_file: orbitfabric_models/poc_slice.yaml
+  flight_contract: generated_artifacts/flight_software/mission_contract.h
+  srdb: generated_artifacts/ground_segment/poc_srdb.yaml
+  xtce_mdb: execution/generated/poc_xtce_mdb.xml
+
+validated_stage4_chain:
+  - generate_poc_artifacts
+  - validate_opensvf_srdb_xtce
+  - generate_poc_xtce_mdb
+  - validate_openobsw_contract_adapter
+  - validate_openobsw_ping_smoke
+
+command_path:
+  orbitfabric_command: OF_CMD_PING
+  pus_tc:
+    service: 17
+    subservice: 1
+  openobsw_target: host_sim
+
+expected_telemetry:
+  - service: 1
+    subservice: 1
+    meaning: acceptance_success
+  - service: 17
+    subservice: 2
+    meaning: connection_test_report
+  - service: 1
+    subservice: 7
+    meaning: completion_success
+
+future_campaign_target:
+  ground_stack: YAMCS
+  validation_engine: OpenSVF
+  goal: >
+    Execute the command path through the ground-facing MDB/campaign layer and
+    collect machine-readable evidence that the expected telemetry sequence is visible.
+
+current_boundary:
+  yamcs_runtime_execution: false
+  renode_execution: false
+  docker_workflow: false
+  ci_workflow: false
+  openobsw_telemetry_runtime_mapping: false
+  openobsw_event_runtime_mapping: false
+  housekeeping_runtime_mapping: false

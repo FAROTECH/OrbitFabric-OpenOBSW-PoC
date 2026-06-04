@@ -97,3 +97,31 @@ The wrapper runs the existing generation and validation steps in sequence:
     python3 tools/validate_openobsw_ping_smoke.py
 
 This stage only unifies local validation. It does not introduce a YAMCS runtime campaign, Renode setup, Docker workflow, CI workflow, telemetry runtime mapping, event runtime mapping, or housekeeping runtime mapping.
+
+## Stage 5.0 closed-loop campaign boundary
+
+The next planned validation boundary is recorded as a campaign descriptor:
+
+    execution/campaigns/poc_ping_closed_loop.yaml
+
+Validate the descriptor with:
+
+    python3 tools/validate_stage5_campaign_plan.py
+
+This stage does not execute YAMCS, Renode, Docker, CI, OpenOBSW telemetry runtime mapping, OpenOBSW event runtime mapping, or housekeeping runtime mapping.
+
+It only makes the next closed-loop OpenSVF/YAMCS campaign boundary explicit and machine-checkable.
+
+## Stage 5.1 local evidence bundle
+
+The current Stage 5 campaign boundary can produce a local machine-readable evidence bundle:
+
+    python3 tools/generate_stage5_evidence_bundle.py --opensvf-repo ../opensvf --openobsw-repo ../openobsw --clean
+
+The generated evidence is intentionally local and ignored by Git:
+
+    execution/evidence/poc_ping_closed_loop_evidence.json
+
+This does not execute YAMCS, Renode, Docker, CI, telemetry runtime mapping, event runtime mapping, or housekeeping runtime mapping.
+
+The Stage 5 evidence bundle also records local provenance and SHA-256 hashes for the campaign descriptor and generated artifacts, so the evidence can be traced to a specific repository state and artifact set.
