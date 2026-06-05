@@ -1,0 +1,55 @@
+discovery_id: poc_opensvf_pipe_mode_discovery
+stage: "6.1"
+status: discovery
+description: >
+  Discovery descriptor for checking whether existing OpenSVF pipe mode and
+  spacecraft configuration mechanisms are sufficient for the next PoC runtime
+  campaign step, or whether a small PoC-side configuration wrapper is required.
+
+baseline_inputs:
+  stage6_runtime_discovery_doc: docs/stage6_runtime_campaign_discovery.md
+  stage6_runtime_discovery_descriptor: execution/campaigns/poc_runtime_discovery.yaml
+  stage5_campaign_descriptor: execution/campaigns/poc_ping_closed_loop.yaml
+  generated_srdb: generated_artifacts/ground_segment/poc_srdb.yaml
+  generated_xtce_mdb: execution/generated/poc_xtce_mdb.xml
+  generated_flight_contract: generated_artifacts/flight_software/mission_contract.h
+  openobsw_host_sim_binary: ../openobsw/build_stage4_orbitfabric/sim/obsw_sim
+
+opensvf_discovery_targets:
+  spacecraft_loader: src/svf/config/spacecraft.py
+  xtce_generator: tools/generate_xtce.py
+  yamcs_readme_section: README.md
+  expected_obsw_transport_modes:
+    - pipe
+    - socket
+    - stub
+
+findings:
+  opensvf_pipe_mode_available: true
+  spacecraft_loader_accepts_external_yaml: true
+  external_srdb_path_direct_support_found: false
+  poc_side_config_wrapper_likely_required: true
+
+first_runtime_path_assumption:
+  use_existing_opensvf_pipe_mode: true
+  use_openobsw_host_sim: true
+  require_opensvf_proper_change_now: false
+  require_openobsw_proper_change_now: false
+  execute_yamcs_runtime_now: false
+
+open_questions:
+  - Can the PoC-generated SRDB be consumed by OpenSVF without copying it into OpenSVF's repo-local srdb/baseline tree?
+  - Should Stage 6.2 introduce a PoC-side spacecraft.yaml wrapper?
+  - Should Stage 6.2 introduce a PoC-side XTCE generation wrapper around OpenSVF's generate_xtce function?
+  - Is an upstream OpenSVF CLI option for external SRDB path needed later, or can the PoC remain wrapper-only?
+
+current_boundary:
+  yamcs_runtime_execution: false
+  command_injection_runtime: false
+  telemetry_runtime_observation: false
+  docker_workflow: false
+  ci_workflow: false
+  renode_execution: false
+  opensvf_proper_changes: false
+  openobsw_proper_changes: false
+  runtime_bridge_implementation: false
