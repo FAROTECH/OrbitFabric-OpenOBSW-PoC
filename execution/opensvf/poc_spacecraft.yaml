@@ -1,0 +1,11 @@
+version: 1
+spacecraft: OrbitFabric-OpenOBSW-PoC
+
+obsw:
+  type: pipe
+  binary: ../../../openobsw/build_stage4_orbitfabric/sim/obsw_sim
+
+simulation:
+  dt: 0.1
+  stop_time: 1.0
+  realtime: false
