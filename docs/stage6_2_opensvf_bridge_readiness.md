@@ -94,6 +94,25 @@ The validator does not run:
     CI
     Renode
 
+## Explicit OpenSVF preflight assumption
+
+Stage 6.2 assumes that OpenSVF exposes:
+
+    svf.config.validator.SpacecraftValidator
+    SpacecraftValidator.validate_or_raise()
+
+for preflight validation of the PoC-side `spacecraft.yaml`.
+
+This was not established by Stage 6.1. Stage 6.1 only checked the OpenSVF source facts around `SpacecraftLoader` and `tools/generate_xtce.py`.
+
+For that reason, the `SpacecraftValidator` usage is recorded as an explicit Stage 6.2 preflight assumption in the runtime input manifest. If Stage 6.3 fails at this point, the failure should be interpreted as a validation API or local OpenSVF checkout assumption issue, not as a runtime bridge failure.
+
+## Stage 6.3 timing note
+
+The current `simulation.stop_time: 1.0` value is a readiness placeholder.
+
+Stage 6.2 does not execute the runtime path. Stage 6.3 may need to tune this value according to the OpenOBSW scheduler tick rate and the observed TC/TM round-trip latency.
+
 ## Current boundary
 
 Stage 6.2 does not introduce:

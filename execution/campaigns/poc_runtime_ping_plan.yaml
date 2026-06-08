@@ -36,6 +36,12 @@ expected_telemetry_sequence:
   - tm: TM(1,7)
     meaning: command_completion
 
+stage6_3_tuning_notes:
+  spacecraft_stop_time_seconds: 1.0
+  stop_time_is_readiness_placeholder: true
+  may_need_runtime_tuning: true
+  tuning_driver: OpenOBSW scheduler tick rate and TC/TM round-trip latency
+
 current_boundary:
   yamcs_runtime_execution: false
   command_injection_runtime: false

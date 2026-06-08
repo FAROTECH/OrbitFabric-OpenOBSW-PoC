@@ -97,6 +97,10 @@ def validate_doc() -> None:
         "TC(17,1)",
         "TM(1,1), TM(17,2), TM(1,7)",
         "does not invent an unsupported SRDB, XTCE, MDB or YAMCS field inside `spacecraft.yaml`",
+        "Explicit OpenSVF preflight assumption",
+        "SpacecraftValidator.validate_or_raise()",
+        "Stage 6.3 timing note",
+        "simulation.stop_time: 1.0",
         "YAMCS runtime execution",
         "OpenSVF proper changes",
         "OpenOBSW proper changes",
@@ -180,6 +184,25 @@ def validate_runtime_inputs() -> None:
     require(
         opensvf.get("external_srdb_path_direct_support_assumed") is False,
         "external_srdb_path_direct_support_assumed must be false",
+    )
+
+    preflight = data.get("opensvf_preflight_assumptions")
+    require(isinstance(preflight, dict), "opensvf_preflight_assumptions must be a mapping")
+    require(
+        preflight.get("spacecraft_validator_import") == "svf.config.validator.SpacecraftValidator",
+        "Unexpected opensvf_preflight_assumptions.spacecraft_validator_import",
+    )
+    require(
+        preflight.get("spacecraft_validator_method") == "validate_or_raise",
+        "Unexpected opensvf_preflight_assumptions.spacecraft_validator_method",
+    )
+    require(
+        preflight.get("discovered_in_stage6_1") is False,
+        "opensvf_preflight_assumptions.discovered_in_stage6_1 must be false",
+    )
+    require(
+        preflight.get("assumption_status") == "explicit_stage6_2_preflight_assumption",
+        "Unexpected opensvf_preflight_assumptions.assumption_status",
     )
 
     openobsw = data.get("openobsw")
@@ -273,6 +296,21 @@ def validate_runtime_ping_plan() -> None:
     require(isinstance(tm_sequence, list), "expected_telemetry_sequence must be a list")
     require([entry.get("tm") for entry in tm_sequence] == EXPECTED_TM_SEQUENCE,
             "Unexpected expected_telemetry_sequence")
+
+    tuning = data.get("stage6_3_tuning_notes")
+    require(isinstance(tuning, dict), "stage6_3_tuning_notes must be a mapping")
+    require(
+        float(tuning.get("spacecraft_stop_time_seconds")) == 1.0,
+        "stage6_3_tuning_notes.spacecraft_stop_time_seconds must be 1.0",
+    )
+    require(
+        tuning.get("stop_time_is_readiness_placeholder") is True,
+        "stage6_3_tuning_notes.stop_time_is_readiness_placeholder must be true",
+    )
+    require(
+        tuning.get("may_need_runtime_tuning") is True,
+        "stage6_3_tuning_notes.may_need_runtime_tuning must be true",
+    )
 
     validate_boundary_false(data.get("current_boundary"), "current_boundary")
 

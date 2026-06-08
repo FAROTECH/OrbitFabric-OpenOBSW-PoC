@@ -20,6 +20,17 @@ opensvf:
   external_srdb_path_direct_support_assumed: false
   external_srdb_path_strategy: poc_side_runtime_input_manifest
 
+opensvf_preflight_assumptions:
+  spacecraft_validator_import: svf.config.validator.SpacecraftValidator
+  spacecraft_validator_method: validate_or_raise
+  discovered_in_stage6_1: false
+  assumption_status: explicit_stage6_2_preflight_assumption
+  failure_meaning: >
+    If this import or method fails during Stage 6.2 or Stage 6.3 preflight,
+    the failure indicates that the OpenSVF validation API assumption changed
+    or was not available in the local OpenSVF checkout. It should not be
+    interpreted as a runtime bridge failure.
+
 openobsw:
   host_sim_binary: ../openobsw/build_stage4_orbitfabric/sim/obsw_sim
   expected_contract_adapter: orbitfabric_enabled
