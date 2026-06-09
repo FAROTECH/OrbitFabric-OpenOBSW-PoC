@@ -1,0 +1,55 @@
+campaign_id: poc_runtime_ping_plan
+stage: "6.2"
+status: readiness_plan
+
+description: >
+  Runtime readiness plan for the first future OpenSVF/OpenOBSW/YAMCS smoke
+  campaign. This plan records the intended TC/TM path but does not execute it.
+
+bridge_assumption:
+  candidate_bridge: opensvf_pipe_mode
+  custom_bridge_process: false
+  opensvf_proper_changes_required_now: false
+  openobsw_proper_changes_required_now: false
+
+spacecraft_config:
+  path: execution/opensvf/poc_spacecraft.yaml
+  obsw_transport: pipe
+
+runtime_inputs:
+  manifest: execution/opensvf/poc_runtime_inputs.yaml
+  generated_srdb: generated_artifacts/ground_segment/poc_srdb.yaml
+  generated_xtce_mdb: execution/generated/poc_xtce_mdb.xml
+  flight_contract: generated_artifacts/flight_software/mission_contract.h
+
+command_under_test:
+  orbitfabric_command: OF_CMD_PING
+  pus_service: 17
+  pus_subtype: 1
+  tc: TC(17,1)
+
+expected_telemetry_sequence:
+  - tm: TM(1,1)
+    meaning: command_acceptance
+  - tm: TM(17,2)
+    meaning: connection_test_report
+  - tm: TM(1,7)
+    meaning: command_completion
+
+stage6_3_tuning_notes:
+  spacecraft_stop_time_seconds: 1.0
+  stop_time_is_readiness_placeholder: true
+  may_need_runtime_tuning: true
+  tuning_driver: OpenOBSW scheduler tick rate and TC/TM round-trip latency
+
+current_boundary:
+  yamcs_runtime_execution: false
+  command_injection_runtime: false
+  telemetry_runtime_observation: false
+  docker_workflow: false
+  ci_workflow: false
+  renode_execution: false
+  opensvf_proper_changes: false
+  openobsw_proper_changes: false
+  custom_bridge_process: false
+  runtime_bridge_implementation: false
