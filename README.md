@@ -23,7 +23,7 @@ The first PoC slice intentionally stays small:
    * a flight-side `mission_contract.h`;
    * an OpenSVF-compatible SRDB YAML.
 4. Let OpenSVF generate the XTCE/YAMCS mission database.
-5. Execute the contracted behavior in OpenOBSW.
+5. Execute the contracted behavior in OpenOBSW/OpenSVF runtime smoke tests.
 6. Validate command, telemetry, and event visibility through OpenSVF/YAMCS.
 
 The first slice focuses on:
@@ -41,7 +41,7 @@ For the staged execution plan, see [Roadmap](docs/roadmap.md).
 
 ## Repository Structure & Data Flow
 
-The repository separates the OrbitFabric source model, PoC-specific mapping/allocation data, generated artifacts, and execution evidence.
+The repository separates the OrbitFabric source model, PoC-specific mapping/allocation data, generated artifacts, execution assets, validation tools, and local evidence.
 
 ```text
 orbitfabric_models/
@@ -52,7 +52,14 @@ generated_artifacts/
   flight_software/       Generated OpenOBSW-facing C contract artifacts
   ground_segment/        Generated OpenSVF/YAMCS-facing artifacts
 
-execution/               Future execution scripts, validation runners, and campaign material
+execution/
+  opensvf/               PoC-side OpenSVF spacecraft descriptors
+  campaigns/             OpenSVF campaign descriptors
+  procedures/            OpenSVF campaign procedures
+  generated/             Local generated runtime/MDB outputs, ignored by git
+  evidence/              Local runtime evidence, ignored by git
+
+tools/                   PoC generators and validators
 
 docs/                    Architecture, mapping, roadmap, and workflow documentation
 ```
@@ -86,16 +93,43 @@ OrbitFabric Core Mission Model
 -> generated OpenSVF-compatible SRDB YAML
 ```
 
-## Current Status
+## Current Baseline
+
+The repository has moved beyond the initial modeling-only phase.
+
+Completed baseline:
 
 * [x] Define high-level mapping concepts.
 * [x] Define the minimal OrbitFabric Core-compatible Mission Model.
 * [x] Validate the Mission Model with OrbitFabric Core 1.0.0.
-* [ ] Align the PoC adapter mapping.
-* [ ] Generate `mission_contract.h`.
-* [ ] Generate OpenSVF-compatible SRDB YAML.
-* [ ] Generate XTCE/YAMCS MDB via OpenSVF.
-* [ ] Execute the validation campaign.
+* [x] Align the PoC adapter mapping/allocation layer.
+* [x] Generate `mission_contract.h`.
+* [x] Generate OpenSVF-compatible SRDB YAML.
+* [x] Validate local XTCE/YAMCS MDB generation through the PoC/OpenSVF wrapper.
+* [x] Establish OpenSVF pipe-mode readiness without introducing a custom bridge process.
+* [x] Execute the first OpenSVF runtime smoke against the OrbitFabric-enabled OpenOBSW host simulator.
+* [x] Validate the PUS ping command path: `TC(17,1) -> TM(1,1), TM(17,2), TM(1,7)`.
+
+Open items:
+
+* [ ] YAMCS runtime execution.
+* [ ] SRDB package/version-handshake cleanup for a clean runtime environment.
+* [ ] Runtime validation of `TM(3,25)` housekeeping telemetry.
+* [ ] Runtime validation of the `TM(5,3)` event/fault path.
+* [ ] Broader reproducibility hardening, such as CI, clean-clone setup, or optional Docker/devcontainer support.
+
+## Stage 6.3 Runtime Finding
+
+The first campaign-based OpenSVF runtime smoke requires realtime simulation mode:
+
+```yaml
+simulation:
+  realtime: true
+```
+
+Without realtime mode, the OpenSVF software tick source can complete the simulation before an operator-style campaign procedure observes telemetry in wall-clock time.
+
+See [Stage 6.3 OpenSVF Runtime Smoke](docs/stage6_3_opensvf_runtime_smoke.md).
 
 ## Development Workflow
 

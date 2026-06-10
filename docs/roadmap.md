@@ -50,7 +50,7 @@ PASSED
 
 ## Stage 1 - Documentation Alignment
 
-Status: **current**
+Status: **completed**
 
 Goal:
 
@@ -77,7 +77,7 @@ Acceptance criteria:
 
 ## Stage 2 - PoC Adapter Generation Prototype
 
-Status: **planned**
+Status: **completed**
 
 Goal:
 
@@ -88,14 +88,14 @@ orbitfabric_models/mission/
 orbitfabric_models/poc_slice.yaml
 ```
 
-Target generated artifacts:
+Generated artifacts:
 
 ```text
 generated_artifacts/flight_software/mission_contract.h
 generated_artifacts/ground_segment/poc_srdb.yaml
 ```
 
-Expected adapter behavior:
+Adapter behavior:
 
 * validate/read the OrbitFabric Core Mission Model;
 * consume the PoC mapping/allocation layer;
@@ -113,7 +113,7 @@ Expected adapter behavior:
 * fixed-width C types only;
 * deterministic `OF_` naming.
 
-Acceptance criteria:
+Validation:
 
 ```text
 orbitfabric lint orbitfabric_models/mission/
@@ -122,21 +122,22 @@ python tools/generate_poc_artifacts.py
 
 The generated files must be stable across repeated runs.
 
-## Stage 3 - OpenSVF SRDB and XTCE/YAMCS Ingestion
+## Stage 3 - OpenSVF SRDB and XTCE/YAMCS MDB Wrapper
 
-Status: **planned**
+Status: **completed for local PoC generation, YAMCS runtime still pending**
 
 Goal:
 
-Prove that the generated OpenSVF-compatible SRDB artifact can be consumed by OpenSVF tooling and transformed into a YAMCS-visible MDB.
+Prove that the generated OpenSVF-compatible SRDB artifact can be consumed by OpenSVF tooling and transformed into a local XTCE/YAMCS MDB artifact without modifying OpenSVF proper.
 
-Target chain:
+Validated local chain:
 
 ```text
 generated_artifacts/ground_segment/poc_srdb.yaml
--> OpenSVF SRDB loader
--> OpenSVF generate_xtce.py
--> YAMCS MDB
+-> PoC-side OpenSVF wrapper
+-> OpenSVF SRDB loading path
+-> OpenSVF XTCE generation
+-> execution/generated/poc_xtce_mdb.xml
 ```
 
 Known design point:
@@ -145,33 +146,41 @@ OpenSVF currently owns SRDB loading and XTCE generation.
 
 The PoC should not make OrbitFabric Core emit XTCE directly.
 
-Open point:
-
-The exact ingestion path for a generated PoC SRDB file must be validated during implementation. A wrapper or a small OpenSVF-side enhancement may be needed if the current XTCE generation path only loads a fixed SRDB location.
-
 Acceptance criteria:
 
 * generated SRDB YAML validates against OpenSVF expectations;
-* XTCE/YAMCS MDB can be produced through OpenSVF tooling;
-* OrbitFabric Core remains backend-agnostic.
+* XTCE/YAMCS MDB can be produced through PoC-side OpenSVF wrapper tooling;
+* OrbitFabric Core remains backend-agnostic;
+* generated execution output remains local and ignored by git.
 
-## Stage 4 - OpenOBSW Contract Consumption
+Remaining work:
 
-Status: **planned**
+* run or expose the generated MDB through a real YAMCS runtime path.
+
+## Stage 4 - OpenOBSW Contract Consumption Boundary
+
+Status: **exercised through runtime smoke, OpenOBSW proper remains external to this repo**
 
 Goal:
 
-Use the generated flight-side contract in OpenOBSW without moving runtime logic into generated files.
+Use the generated flight-side contract in the OpenOBSW integration boundary without moving runtime logic into generated files.
 
 Target chain:
 
 ```text
 generated_artifacts/flight_software/mission_contract.h
--> OpenOBSW contract include
+-> OrbitFabric-enabled OpenOBSW host simulator
 -> S17 ping path
 -> S3 housekeeping path
 -> S5 warning event path
 ```
+
+Current baseline:
+
+* the generated contract header exists in this repository;
+* it remains contract-only;
+* the Stage 6.3 runtime smoke exercises the OrbitFabric-enabled OpenOBSW host simulator through OpenSVF pipe mode;
+* OpenOBSW proper changes are outside this repository and are not duplicated here.
 
 Acceptance criteria:
 
@@ -184,7 +193,7 @@ Acceptance criteria:
 
 ## Stage 5 - Closed-Loop Validation
 
-Status: **planned**
+Status: **partially completed**
 
 Goal:
 
@@ -193,39 +202,186 @@ Run the minimal end-to-end validation chain.
 Target validation paths:
 
 ```text
-YAMCS/OpenSVF -> TC(17,1) ping
-OpenOBSW -> TM(17,2) pong
+OpenSVF -> TC(17,1) ping
+OpenOBSW -> TM(1,1), TM(17,2), TM(1,7)
 
 OpenOBSW -> TM(3,25) housekeeping
-YAMCS/OpenSVF -> telemetry visibility
+OpenSVF/YAMCS -> telemetry visibility
 
 OpenOBSW -> TM(5,3) warning event
-YAMCS/OpenSVF -> event/alarm visibility
+OpenSVF/YAMCS -> event/alarm visibility
 ```
 
-Acceptance criteria:
+Completed:
 
-* one command path validated;
-* one telemetry path validated;
-* one event/fault path validated;
-* validation evidence captured;
-* outputs are reproducible enough to be documented.
+* the PUS ping command path is validated by Stage 6.3 using OpenSVF campaign tooling and pipe mode;
+* machine-readable campaign evidence can be generated locally.
 
-## Stage 6 - Reproducibility and Hardening
+Still open:
 
-Status: **planned**
+* runtime validation of `TM(3,25)` housekeeping telemetry;
+* runtime validation of the `TM(5,3)` warning event/fault path;
+* YAMCS runtime visibility.
+
+## Stage 6 - OpenSVF Runtime Bridge Discovery and Hardening
+
+Status: **in progress**
 
 Goal:
 
-Make the PoC repeatable and easier to run by other contributors.
+Make the PoC repeatable and progressively closer to a real OpenSVF/YAMCS validation workflow, without adding architecture prematurely.
+
+### Stage 6.1 - OpenSVF Pipe Mode Discovery
+
+Status: **completed**
+
+Finding:
+
+OpenSVF already provides pipe mode and `SpacecraftLoader` support sufficient to attempt a PoC-side runtime wrapper before introducing any custom bridge process.
+
+Reference:
+
+```text
+docs/stage6_1_opensvf_pipe_mode_discovery.md
+```
+
+### Stage 6.2 - OpenSVF Bridge Readiness Wrapper
+
+Status: **completed**
+
+Finding:
+
+The PoC-side OpenSVF wrapper can describe the expected OpenOBSW host simulator pipe-mode path while keeping external SRDB/XTCE/YAMCS handling outside unsupported `spacecraft.yaml` fields.
+
+Reference:
+
+```text
+docs/stage6_2_opensvf_bridge_readiness.md
+```
+
+### Stage 6.3 - OpenSVF Runtime Smoke
+
+Status: **completed**
+
+Validated runtime path:
+
+```text
+OpenSVF campaign runner
+-> SpacecraftLoader
+-> OBCEmulatorAdapter
+-> pipe mode
+-> OrbitFabric-enabled OpenOBSW obsw_sim
+-> PUS TC(17,1)
+-> PUS TM(1,1)
+-> PUS TM(17,2)
+-> PUS TM(1,7)
+```
+
+Critical runtime finding:
+
+```yaml
+simulation:
+  realtime: true
+```
+
+is required for campaign procedures that observe telemetry in wall-clock time.
+
+Reference:
+
+```text
+docs/stage6_3_opensvf_runtime_smoke.md
+```
+
+### Stage 6.4 - Documentation and Roadmap Baseline Sync
+
+Status: **current**
+
+Goal:
+
+Bring the top-level documentation back in line with the actual merged PoC baseline after Stage 6.3.
+
+Scope:
+
+* update the README current baseline;
+* update this roadmap;
+* update the mapping concept immediate next steps;
+* do not change runtime behavior;
+* do not modify OpenSVF proper;
+* do not modify OpenOBSW proper.
+
+## Candidate Next Technical Stages
+
+### Candidate Stage 6.5A - HK Telemetry Runtime Smoke
+
+Goal:
+
+Validate the generated telemetry/HK path at runtime.
+
+Target path:
+
+```text
+eps.obc.bus_voltage_mv
+-> generated SRDB parameter
+-> TM(3,25)
+-> OpenSVF runtime observation
+```
+
+Rationale:
+
+The generated SRDB currently covers the PoC telemetry parameter. The next high-value runtime proof is to observe the housekeeping telemetry path, not only the ping command path.
+
+### Candidate Stage 6.5B - SRDB Package and Clean Runtime Environment
+
+Goal:
+
+Decide whether the non-blocking Stage 6.3 warning:
+
+```text
+obsw-srdb package not installed — cannot verify SRDB version handshake
+```
+
+should be resolved through packaging/setup work.
+
+Rationale:
+
+Stage 6.3 proves the ping loop works despite the warning. A later stage may still need a clean SRDB/version-handshake environment for stronger reproducibility.
+
+### Candidate Stage 6.6 - YAMCS Runtime Visibility
+
+Goal:
+
+Run or expose the generated MDB through a YAMCS-visible runtime path.
+
+Rationale:
+
+The PoC has local XTCE/MDB generation support, but YAMCS runtime execution is not yet demonstrated.
+
+### Candidate Stage 6.7 - Event/Fault Runtime Path
+
+Goal:
+
+Validate the event/fault path:
+
+```text
+eps.voltage_out_of_bounds
+-> fault/event materialization
+-> TM(5,3)
+-> OpenSVF/YAMCS event or alarm visibility
+```
+
+Rationale:
+
+The semantic event/fault exists in the Mission Model and mapping layer, but it has not yet been closed in runtime evidence.
+
+## Reproducibility and Hardening Backlog
 
 Potential deliverables:
 
 ```text
 CI lint check
 adapter generation test
-golden generated artifacts
-execution scripts
+golden generated artifacts check
+runtime smoke script
 optional Docker/devcontainer support
 optional Renode/YAMCS runner
 ```
