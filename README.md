@@ -109,12 +109,14 @@ Completed baseline:
 * [x] Establish OpenSVF pipe-mode readiness without introducing a custom bridge process.
 * [x] Execute the first OpenSVF runtime smoke against the OrbitFabric-enabled OpenOBSW host simulator.
 * [x] Validate the PUS ping command path: `TC(17,1) -> TM(1,1), TM(17,2), TM(1,7)`.
+* [x] Validate the first OpenSVF-observed `TM(3,25)` housekeeping runtime smoke.
+* [x] Confirm DHS OBC housekeeping visibility through the OpenSVF `ParameterStore`.
 
 Open items:
 
 * [ ] YAMCS runtime execution.
 * [ ] SRDB package/version-handshake cleanup for a clean runtime environment.
-* [ ] Runtime validation of `TM(3,25)` housekeeping telemetry.
+* [ ] Full OrbitFabric housekeeping contract runtime validation for `eps.obc.bus_voltage_mv`.
 * [ ] Runtime validation of the `TM(5,3)` event/fault path.
 * [ ] Broader reproducibility hardening, such as CI, clean-clone setup, or optional Docker/devcontainer support.
 
@@ -130,6 +132,22 @@ simulation:
 Without realtime mode, the OpenSVF software tick source can complete the simulation before an operator-style campaign procedure observes telemetry in wall-clock time.
 
 See [Stage 6.3 OpenSVF Runtime Smoke](docs/stage6_3_opensvf_runtime_smoke.md).
+
+## Stage 6.5 HK Telemetry Runtime Finding
+
+The first OpenSVF-observed OpenOBSW housekeeping runtime smoke is now validated.
+
+Stage 6.5 observes:
+
+```text
+TM(3,25)
+```
+
+through the public OpenSVF campaign API and confirms that the DHS OBC on-board time parameter becomes visible in the OpenSVF `ParameterStore` as `dhs.obc.obt`.
+
+This validates the first OpenSVF-visible OpenOBSW housekeeping runtime path. It does not yet validate the full OrbitFabric housekeeping contract path for `eps.obc.bus_voltage_mv`, nor does it resolve YAMCS runtime execution or SRDB package/version-handshake cleanup.
+
+See [Stage 6.5 OpenSVF HK Telemetry Runtime Smoke](docs/stage6_5_hk_telemetry_runtime_smoke.md).
 
 ## Development Workflow
 

@@ -125,3 +125,25 @@ The generated evidence is intentionally local and ignored by Git:
 This does not execute YAMCS, Renode, Docker, CI, telemetry runtime mapping, event runtime mapping, or housekeeping runtime mapping.
 
 The Stage 5 evidence bundle also records local provenance and SHA-256 hashes for the campaign descriptor and generated artifacts, so the evidence can be traced to a specific repository state and artifact set.
+
+## Stage 6.5 HK telemetry runtime smoke
+
+Stage 6.5 adds an OpenSVF runtime campaign for housekeeping telemetry:
+
+    execution/campaigns/poc_runtime_hk_smoke.yaml
+
+Validate the static Stage 6.5 assets with:
+
+    ../opensvf/.venv/bin/python tools/validate_stage6_5_hk_telemetry_runtime_smoke.py
+
+Run the runtime campaign with:
+
+    ../opensvf/.venv/bin/python -m svf.campaign.cli campaign execution/campaigns/poc_runtime_hk_smoke.yaml --json execution/evidence/poc_runtime_hk_smoke_report.json
+
+The generated evidence is intentionally local and ignored by Git:
+
+    execution/evidence/poc_runtime_hk_smoke_report.json
+
+This stage validates OpenSVF observation of `TM(3,25)` and DHS OBC `ParameterStore` visibility through `dhs.obc.obt`.
+
+It does not execute YAMCS, Renode, Docker, CI, event/fault runtime mapping, SRDB package/version-handshake cleanup, or full OrbitFabric housekeeping contract runtime validation for `eps.obc.bus_voltage_mv`.
