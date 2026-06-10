@@ -1,0 +1,6 @@
+campaign: Stage 6.3 OpenSVF Runtime Ping Smoke
+spacecraft: ../opensvf/poc_spacecraft_runtime_smoke.yaml
+procedures:
+  - ../procedures/poc_runtime_ping_smoke.py
+requirements:
+  - OF-STAGE6-3-RUNTIME-SMOKE

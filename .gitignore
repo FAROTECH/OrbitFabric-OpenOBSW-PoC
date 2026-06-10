@@ -4,3 +4,9 @@ execution/generated/
 
 # Local Stage 5 execution evidence
 execution/evidence/
+
+# OpenSVF local run outputs
+results/
+
+# Local generated runtime evidence
+execution/evidence/*.json
