@@ -104,6 +104,8 @@ are PoC adapter allocation values.
 
 They are not OrbitFabric Core-stable semantic identifiers.
 
+They are also not APIDs, packet IDs, or packed PUS service/subservice identifiers. For example, `0x1701` is mnemonic for the PoC ping allocation but must not be interpreted as the wire encoding of `TC[17,1]`. PUS alignment is defined only by the explicit mapping fields such as `pus_service`, `pus_subtype`, housekeeping SID, and event mapping.
+
 ## 4. High-Level Data Flow
 
 1. **Mission Definition**
@@ -123,6 +125,10 @@ They are not OrbitFabric Core-stable semantic identifiers.
    ```text
    generated_artifacts/flight_software/mission_contract.h
    ```
+
+   The generated flight-side contract header is an in-memory contract boundary. Structs such as `of_hk_obc_t` describe the semantic C representation expected by the adapter boundary. They are not wire-format payload definitions and must not be copied directly into PUS telemetry with `memcpy`.
+
+   Wire serialization, including byte order for multi-byte fields and any packing/alignment constraints, belongs to the OpenOBSW/PUS adapter layer.
 
    Ground side:
 
@@ -339,7 +345,8 @@ Campaign procedures that observe telemetry in wall-clock time should use realtim
 | Adapter role | Projection/mapping layer from Core model to ecosystem artifacts |
 | `mission_contract.h` role | Contract-only C11 header |
 | C prefix | `OF_` |
-| Numeric IDs | PoC adapter allocation values, not Core semantic truth |
+| Numeric IDs | PoC adapter allocation values, not APIDs, packet IDs, or packed PUS service/subservice identifiers |
+| HK C structs | In-memory contract representations, not wire-format payload layouts |
 | Ground artifact path | PoC adapter -> OpenSVF-compatible SRDB -> OpenSVF XTCE/YAMCS MDB |
 | First execution target | OpenOBSW host simulation through OpenSVF pipe mode |
 | Custom bridge process | Not needed for the first runtime smoke |
