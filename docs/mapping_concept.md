@@ -104,6 +104,8 @@ are PoC adapter allocation values.
 
 They are not OrbitFabric Core-stable semantic identifiers.
 
+They are also not APIDs, packet IDs, or packed PUS service/subservice identifiers. For example, `0x1701` is mnemonic for the PoC ping allocation but must not be interpreted as the wire encoding of `TC[17,1]`. PUS alignment is defined only by the explicit mapping fields such as `pus_service`, `pus_subtype`, housekeeping SID, and event mapping.
+
 ## 4. High-Level Data Flow
 
 1. **Mission Definition**
@@ -124,6 +126,10 @@ They are not OrbitFabric Core-stable semantic identifiers.
    generated_artifacts/flight_software/mission_contract.h
    ```
 
+   The generated flight-side contract header is an in-memory contract boundary. Structs such as `of_hk_obc_t` describe the semantic C representation expected by the adapter boundary. They are not wire-format payload definitions and must not be copied directly into PUS telemetry with `memcpy`.
+
+   Wire serialization, including byte order for multi-byte fields and any packing/alignment constraints, belongs to the OpenOBSW/PUS adapter layer.
+
    Ground side:
 
    ```text
@@ -134,6 +140,8 @@ They are not OrbitFabric Core-stable semantic identifiers.
 
    OpenSVF remains responsible for generating or assisting the XTCE/YAMCS MDB from OpenSVF-compatible SRDB input.
 
+   The current PoC baseline uses a PoC-side wrapper to load the generated SRDB through OpenSVF and write a local generated MDB artifact under `execution/generated/`.
+
 5. **OpenOBSW Execution**
 
    OpenOBSW consumes the flight-side contract and runs the contracted command, telemetry, and event behavior.
@@ -141,6 +149,8 @@ They are not OrbitFabric Core-stable semantic identifiers.
 6. **Validation and Evidence**
 
    OpenSVF/YAMCS validate command execution, telemetry visibility, and event/alarm behavior.
+
+   The current runtime evidence baseline validates the PUS ping command path through OpenSVF pipe mode and the OrbitFabric-enabled OpenOBSW host simulator.
 
 ## 5. Conceptual Mapping Dictionary
 
@@ -286,7 +296,46 @@ has operational meaning and can be materialized as a PUS Service 5 warning event
 
 The adapter should preserve meaning. It should not blindly materialize every semantic concept onto the wire.
 
-## 8. Settled Decisions
+## 8. Validated Baseline After Stage 6.3
+
+The following parts of the mapping chain are validated in the current repository baseline:
+
+```text
+OrbitFabric Core-compatible Mission Model
+-> PoC mapping/allocation layer
+-> generated mission_contract.h
+-> generated OpenSVF-compatible SRDB YAML
+-> local OpenSVF XTCE/MDB generation wrapper
+-> OpenSVF campaign runner
+-> SpacecraftLoader
+-> OBCEmulatorAdapter
+-> pipe mode
+-> OrbitFabric-enabled OpenOBSW obsw_sim
+-> TC(17,1)
+-> TM(1,1), TM(17,2), TM(1,7)
+```
+
+The Stage 6.3 runtime smoke validates the first command loop.
+
+It does not validate yet:
+
+```text
+TM(3,25) housekeeping telemetry runtime visibility
+TM(5,3) event/fault runtime visibility
+YAMCS runtime execution
+SRDB version-handshake packaging
+```
+
+The important runtime rule discovered in Stage 6.3 is:
+
+```yaml
+simulation:
+  realtime: true
+```
+
+Campaign procedures that observe telemetry in wall-clock time should use realtime simulation mode.
+
+## 9. Settled Decisions
 
 | Decision | Resolution |
 | :--- | :--- |
@@ -296,17 +345,18 @@ The adapter should preserve meaning. It should not blindly materialize every sem
 | Adapter role | Projection/mapping layer from Core model to ecosystem artifacts |
 | `mission_contract.h` role | Contract-only C11 header |
 | C prefix | `OF_` |
-| Numeric IDs | PoC adapter allocation values, not Core semantic truth |
+| Numeric IDs | PoC adapter allocation values, not APIDs, packet IDs, or packed PUS service/subservice identifiers |
+| HK C structs | In-memory contract representations, not wire-format payload layouts |
 | Ground artifact path | PoC adapter -> OpenSVF-compatible SRDB -> OpenSVF XTCE/YAMCS MDB |
-| First execution target | OpenOBSW host simulation or Renode |
+| First execution target | OpenOBSW host simulation through OpenSVF pipe mode |
+| Custom bridge process | Not needed for the first runtime smoke |
 | STM32/bare-metal | Deferred until the contract boundary is stable |
 
-## 9. Immediate Next Steps
+## 10. Current Open Items
 
-1. Align documentation after the Core mission slice merge.
-2. Implement the PoC adapter/generation prototype.
-3. Generate `mission_contract.h`.
-4. Generate OpenSVF-compatible SRDB YAML.
-5. Validate SRDB ingestion and XTCE/YAMCS MDB generation.
-6. Wire the generated flight contract into OpenOBSW.
-7. Run the first closed-loop validation campaign.
+1. Keep top-level documentation synchronized with the actual merged PoC baseline.
+2. Validate the runtime housekeeping telemetry path for `TM(3,25)`.
+3. Decide whether the `obsw-srdb` version-handshake warning should become a clean-environment requirement.
+4. Validate the event/fault path for `TM(5,3)`.
+5. Decide the YAMCS runtime execution boundary after OpenSVF-only runtime evidence is stronger.
+6. Add reproducibility hardening only after the runtime paths are stable.
