@@ -1,0 +1,6 @@
+campaign: Stage 6.5 OpenSVF HK Telemetry Runtime Smoke
+spacecraft: ../opensvf/poc_spacecraft_runtime_smoke.yaml
+procedures:
+  - ../procedures/poc_runtime_hk_smoke.py
+requirements:
+  - OF-STAGE6-5-HK-RUNTIME-SMOKE

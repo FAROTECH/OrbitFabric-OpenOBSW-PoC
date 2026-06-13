@@ -311,26 +311,40 @@ Scope:
 
 ## Candidate Next Technical Stages
 
-### Candidate Stage 6.5A - HK Telemetry Runtime Smoke
+### Stage 6.5 - HK Telemetry Runtime Smoke
+
+Status:
+
+Completed locally on `stage6.5/hk-telemetry-runtime-smoke`.
 
 Goal:
 
-Validate the generated telemetry/HK path at runtime.
+Validate the first OpenSVF-observed OpenOBSW housekeeping telemetry path at runtime.
 
-Target path:
+Validated path:
 
 ```text
-eps.obc.bus_voltage_mv
--> generated SRDB parameter
+OpenSVF campaign runner
+-> OpenSVF SpacecraftLoader
+-> OpenSVF OBCEmulatorAdapter
+-> OpenSVF pipe mode
+-> OrbitFabric-enabled OpenOBSW obsw_sim
+-> OpenOBSW sensor tick
+-> OpenOBSW PUS Service 3 housekeeping tick
 -> TM(3,25)
 -> OpenSVF runtime observation
+-> OpenSVF ParameterStore DHS OBC HK visibility
 ```
 
-Rationale:
+Outcome:
 
-The generated SRDB currently covers the PoC telemetry parameter. The next high-value runtime proof is to observe the housekeeping telemetry path, not only the ping command path.
+Stage 6.5 validates that `TM(3,25)` is observable through the public OpenSVF campaign API and that `dhs.obc.obt` becomes visible in the OpenSVF `ParameterStore`.
 
-### Candidate Stage 6.5B - SRDB Package and Clean Runtime Environment
+Boundary:
+
+This stage validates the existing DHS OBC HK runtime path consumed by OpenSVF. It does not yet validate the full OrbitFabric housekeeping contract path for `eps.obc.bus_voltage_mv`.
+
+### Candidate Later Stage - SRDB Package and Clean Runtime Environment
 
 Goal:
 
