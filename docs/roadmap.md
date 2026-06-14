@@ -358,7 +358,7 @@ docs/stage6_5_hk_telemetry_runtime_smoke.md
 
 Status:
 
-Current local branch: `stage6.6/roadmap-srdb-runtime-triage`.
+Open as PR #17.
 
 Goal:
 
@@ -390,7 +390,49 @@ Reference:
 docs/stage6_6_srdb_runtime_environment_triage.md
 ```
 
-### Candidate Stage 6.7 - YAMCS Runtime Visibility
+### Stage 6.7 - SRDB Runtime Environment Probe
+
+Status:
+
+Local stacked branch: `stage6.7/srdb-version-handshake-probe`.
+
+Goal:
+
+Turn the Stage 6.6 SRDB warning triage into a reproducible local environment check.
+
+Finding:
+
+OpenOBSW already carries an installable Python package under:
+
+```text
+../openobsw/srdb
+```
+
+The OpenSVF runtime warning appears when the OpenSVF Python environment cannot import the `obsw-srdb` package. Installing the OpenOBSW SRDB package into the OpenSVF virtual environment makes `obsw_srdb` importable and allows the Stage 6.5 HK runtime smoke to run without the previous package-not-installed warning.
+
+Local environment setup:
+
+```bash
+../opensvf/.venv/bin/python -m pip install -e ../openobsw/srdb
+```
+
+Validation:
+
+```bash
+../opensvf/.venv/bin/python tools/validate_stage6_7_srdb_runtime_environment.py --run-campaign
+```
+
+Boundary:
+
+Stage 6.7 does not modify OpenSVF, OpenOBSW, YAMCS, or runtime behavior. It only makes the clean local SRDB package/runtime environment requirement explicit and testable from the PoC workspace.
+
+Reference:
+
+```text
+docs/stage6_7_srdb_runtime_environment_probe.md
+```
+
+### Candidate Stage 6.8 - YAMCS Runtime Visibility
 
 Goal:
 
@@ -400,7 +442,7 @@ Rationale:
 
 The PoC has local XTCE/MDB generation support, but YAMCS runtime execution is not yet demonstrated.
 
-### Candidate Stage 6.8 - Event/Fault Runtime Path
+### Candidate Stage 6.9 - Event/Fault Runtime Path
 
 Goal:
 
