@@ -294,7 +294,7 @@ docs/stage6_3_opensvf_runtime_smoke.md
 
 ### Stage 6.4 - Documentation and Roadmap Baseline Sync
 
-Status: **current**
+Status: **completed on main**
 
 Goal:
 
@@ -315,7 +315,7 @@ Scope:
 
 Status:
 
-Completed locally on `stage6.5/hk-telemetry-runtime-smoke`.
+Merged on `main` through PR #16.
 
 Goal:
 
@@ -344,23 +344,53 @@ Boundary:
 
 This stage validates the existing DHS OBC HK runtime path consumed by OpenSVF. It does not yet validate the full OrbitFabric housekeeping contract path for `eps.obc.bus_voltage_mv`.
 
-### Candidate Later Stage - SRDB Package and Clean Runtime Environment
+Review note:
+
+The Stage 6.5 validator intentionally guards against `TC(3,5)` usage. This preserves the design decision that Stage 6.5 observes auto-enabled housekeeping rather than configuring a housekeeping set. Any future stage that configures a custom HK set must explicitly remove or replace that constraint.
+
+Reference:
+
+```text
+docs/stage6_5_hk_telemetry_runtime_smoke.md
+```
+
+### Stage 6.6 - Roadmap Closure and SRDB Runtime Environment Triage
+
+Status:
+
+Current local branch: `stage6.6/roadmap-srdb-runtime-triage`.
 
 Goal:
 
-Decide whether the non-blocking Stage 6.3 warning:
+Close the roadmap state after the Stage 6.5 merge and triage the remaining non-blocking SRDB package/version-handshake warning before choosing the next technical runtime stage.
+
+Known warning:
 
 ```text
-obsw-srdb package not installed — cannot verify SRDB version handshake
+obsw-srdb package not installed - cannot verify SRDB version handshake
 ```
-
-should be resolved through packaging/setup work.
 
 Rationale:
 
-Stage 6.3 proves the ping loop works despite the warning. A later stage may still need a clean SRDB/version-handshake environment for stronger reproducibility.
+Stage 6.3 and Stage 6.5 both prove useful runtime paths despite the warning. The warning should still be made explicit because later YAMCS runtime visibility, stronger MDB reproducibility, or cleaner OpenSVF/OpenOBSW environment setup may depend on a clearer SRDB package/version-handshake story.
 
-### Candidate Stage 6.6 - YAMCS Runtime Visibility
+Scope:
+
+* update the roadmap to reflect that Stage 6.5 is merged on main;
+* record the SRDB warning as a deliberate follow-up item, not as an accidental leftover;
+* preserve the Stage 6.5 boundary around auto-enabled HK observation versus HK set configuration;
+* do not modify runtime behavior;
+* do not modify OpenSVF proper;
+* do not modify OpenOBSW proper;
+* do not claim YAMCS runtime execution.
+
+Reference:
+
+```text
+docs/stage6_6_srdb_runtime_environment_triage.md
+```
+
+### Candidate Stage 6.7 - YAMCS Runtime Visibility
 
 Goal:
 
@@ -370,7 +400,7 @@ Rationale:
 
 The PoC has local XTCE/MDB generation support, but YAMCS runtime execution is not yet demonstrated.
 
-### Candidate Stage 6.7 - Event/Fault Runtime Path
+### Candidate Stage 6.8 - Event/Fault Runtime Path
 
 Goal:
 
