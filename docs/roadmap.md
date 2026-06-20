@@ -358,7 +358,7 @@ docs/stage6_5_hk_telemetry_runtime_smoke.md
 
 Status:
 
-Open as PR #17.
+Completed on main through PR #17.
 
 Goal:
 
