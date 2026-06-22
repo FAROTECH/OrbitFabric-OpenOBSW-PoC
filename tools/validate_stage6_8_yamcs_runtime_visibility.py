@@ -10,9 +10,11 @@ visibility work.
 
 from __future__ import annotations
 
-import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -30,25 +32,60 @@ def fail(message: str) -> None:
     )
 
 
-def read_text(path: Path) -> str:
+def read_text(path: Path, generation_hint: str | None = None) -> str:
     if not path.is_file():
-        fail(f"Required file not found: {path}")
+        message = f"Required file not found: {path}"
+        if generation_hint:
+            message += "\nGenerate it with:\n"
+            message += f"  {generation_hint}"
+        fail(message)
+
     return path.read_text(encoding="utf-8")
 
 
-def extract_generated_mdb_path(manifest_text: str) -> str:
-    match = re.search(
-        r"generated_xtce_mdb:\s*\n(?:[ \t]+[^\n]*\n)*?[ \t]+path:\s*([^\n]+)",
-        manifest_text,
+def require_mapping(value: Any, field_name: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        fail(f"Manifest field must be a YAML mapping: {field_name}")
+
+    return value
+
+
+def require_string(value: Any, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        fail(f"Manifest field must be a non-empty string: {field_name}")
+
+    return value.strip()
+
+
+def load_manifest(manifest_text: str) -> dict[str, Any]:
+    try:
+        loaded = yaml.safe_load(manifest_text)
+    except yaml.YAMLError as exc:
+        fail(f"Runtime input manifest is not valid YAML: {exc}")
+
+    return require_mapping(loaded, "root")
+
+
+def validate_manifest(manifest_text: str) -> tuple[Path, str]:
+    manifest = load_manifest(manifest_text)
+
+    generated_artifacts = require_mapping(
+        manifest.get("generated_artifacts"),
+        "generated_artifacts",
     )
-    if match is None:
-        fail("Manifest does not expose generated_artifacts.generated_xtce_mdb.path")
+    generated_xtce_mdb = require_mapping(
+        generated_artifacts.get("generated_xtce_mdb"),
+        "generated_artifacts.generated_xtce_mdb",
+    )
 
-    return match.group(1).strip().strip("'\"")
-
-
-def validate_manifest(manifest_text: str) -> Path:
-    mdb_relative_path = extract_generated_mdb_path(manifest_text)
+    mdb_relative_path = require_string(
+        generated_xtce_mdb.get("path"),
+        "generated_artifacts.generated_xtce_mdb.path",
+    )
+    generation_hint = require_string(
+        generated_xtce_mdb.get("generation_hint"),
+        "generated_artifacts.generated_xtce_mdb.generation_hint",
+    )
 
     if mdb_relative_path != EXPECTED_MDB_RELATIVE_PATH:
         fail(
@@ -57,14 +94,18 @@ def validate_manifest(manifest_text: str) -> Path:
             f"actual:   {mdb_relative_path}"
         )
 
-    if not re.search(r"yamcs_runtime_execution:\s*false\b", manifest_text):
+    current_boundary = require_mapping(
+        manifest.get("current_boundary"),
+        "current_boundary",
+    )
+    if current_boundary.get("yamcs_runtime_execution") is not False:
         fail("Manifest must still declare current_boundary.yamcs_runtime_execution: false")
 
-    return REPO_ROOT / mdb_relative_path
+    return REPO_ROOT / mdb_relative_path, generation_hint
 
 
-def validate_xtce_mdb(mdb_path: Path) -> None:
-    xml_text = read_text(mdb_path)
+def validate_xtce_mdb(mdb_path: Path, generation_hint: str) -> None:
+    xml_text = read_text(mdb_path, generation_hint)
 
     try:
         root = ET.fromstring(xml_text)
@@ -93,8 +134,8 @@ def validate_xtce_mdb(mdb_path: Path) -> None:
 
 def main() -> int:
     manifest_text = read_text(MANIFEST_PATH)
-    mdb_path = validate_manifest(manifest_text)
-    validate_xtce_mdb(mdb_path)
+    mdb_path, generation_hint = validate_manifest(manifest_text)
+    validate_xtce_mdb(mdb_path, generation_hint)
 
     print("Stage 6.8 YAMCS/MDB runtime visibility readiness")
     print(f"Repository root: {REPO_ROOT}")
