@@ -1,0 +1,25 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV YAMCS_HOME=/opt/yamcs
+ENV PATH="/opt/yamcs/bin:${PATH}"
+
+RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
+    openjdk-21-jre-headless \
+    curl \
+    ca-certificates \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/yamcs && \
+    curl -fsSL https://github.com/yamcs/yamcs/releases/download/yamcs-5.12.6/yamcs-5.12.6-linux-x86_64.tar.gz \
+      -o /tmp/yamcs.tar.gz && \
+    tar -xzf /tmp/yamcs.tar.gz -C /opt/yamcs --strip-components=1 && \
+    rm /tmp/yamcs.tar.gz
+
+EXPOSE 8090 10015 10025/udp
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 \
+    CMD curl -fsS http://localhost:8090/api/ >/dev/null || exit 1
+
+CMD ["/opt/yamcs/bin/yamcsd", "--etc-dir", "/yamcs/etc"]

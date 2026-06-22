@@ -1,0 +1,16 @@
+name: orbitfabric-stage6-9-yamcs
+
+services:
+  yamcs:
+    image: orbitfabric-yamcs-minimal-candidate:stage6.9-local
+    container_name: orbitfabric-stage6-9-yamcs-candidate
+    build:
+      context: .
+      dockerfile: Dockerfile.candidate
+    ports:
+      - "8090:8090"
+      - "10015:10015"
+      - "10025:10025/udp"
+    volumes:
+      - ./etc:/yamcs/etc:ro
+      - ../generated/poc_xtce_mdb.xml:/yamcs/mdb/poc_xtce_mdb.xml:ro
