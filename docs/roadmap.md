@@ -432,17 +432,59 @@ Reference:
 docs/stage6_7_srdb_runtime_environment_probe.md
 ```
 
-### Candidate Stage 6.8 - YAMCS Runtime Visibility
+### Stage 6.8 - YAMCS/MDB Runtime Visibility Readiness
+
+Status: **local readiness path implemented, full YAMCS runtime execution still pending**
+
+Reference:
+
+```text
+docs/stage6_8_yamcs_runtime_visibility_readiness.md
+tools/validate_stage6_8_yamcs_runtime_visibility.py
+```
 
 Goal:
 
-Run or expose the generated MDB through a YAMCS-visible runtime path.
+Expose the generated XTCE/MDB artifact as a clean runtime-facing handoff point
+for the next YAMCS visibility step.
 
 Rationale:
 
-The PoC has local XTCE/MDB generation support, but YAMCS runtime execution is not yet demonstrated.
+The PoC already has local XTCE/MDB generation support. Stage 6.8 makes the
+runtime-facing MDB handoff explicit and testable before introducing a real YAMCS
+launch, import or Docker-based runtime workflow.
 
-### Candidate Stage 6.9 - Event/Fault Runtime Path
+Validation boundary:
+
+```text
+execution/opensvf/poc_runtime_inputs.yaml
+-> generated_xtce_mdb.path
+-> execution/generated/poc_xtce_mdb.xml
+-> XTCE XML parse
+-> eps_obc_bus_voltage_mv
+-> TM_3_25_HK
+-> yamcs_runtime_execution remains false
+```
+
+Stage 6.8 does not launch YAMCS, does not modify OpenSVF or OpenOBSW, and does
+not claim closed-loop YAMCS runtime execution. It prepares the next YAMCS import
+or launch step while preserving the current architectural boundary.
+
+### Candidate Stage 6.9 - YAMCS Runtime Import / Launch
+
+Goal:
+
+Run or import the generated XTCE/MDB artifact through an actual YAMCS-visible
+runtime path.
+
+Rationale:
+
+Stage 6.8 validates that the runtime-facing MDB handoff exists and is testable.
+The next step is to decide and validate the concrete YAMCS runtime boundary,
+without making OrbitFabric Core emit XTCE directly and without replacing
+OpenSVF's SRDB/XTCE/YAMCS responsibilities.
+
+### Candidate Stage 6.10 - Event/Fault Runtime Path
 
 Goal:
 
@@ -457,7 +499,8 @@ eps.voltage_out_of_bounds
 
 Rationale:
 
-The semantic event/fault exists in the Mission Model and mapping layer, but it has not yet been closed in runtime evidence.
+The semantic event/fault exists in the Mission Model and mapping layer, but it
+has not yet been closed in runtime evidence.
 
 ## Reproducibility and Hardening Backlog
 
