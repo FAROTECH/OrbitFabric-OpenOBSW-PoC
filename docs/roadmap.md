@@ -511,11 +511,20 @@ The candidate preserves the OpenSVF-like YAMCS boundary:
 Stage 6.9 does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW
 telemetry delivery into YAMCS, or closed-loop TC/TM execution.
 
-### Candidate Stage 6.10 - Event/Fault Runtime Path
+### Stage 6.10 - Event/Fault Runtime Path Readiness
+
+Status: **local readiness path implemented, live runtime evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_10_event_fault_runtime_path_readiness.md
+tools/validate_stage6_10_event_fault_runtime_path_readiness.py
+```
 
 Goal:
 
-Validate the event/fault path:
+Validate the current readiness state of the event/fault path:
 
 ```text
 eps.voltage_out_of_bounds
@@ -526,8 +535,46 @@ eps.voltage_out_of_bounds
 
 Rationale:
 
-The semantic event/fault exists in the Mission Model and mapping layer, but it
-has not yet been closed in runtime evidence.
+The semantic event/fault exists in the Mission Model and mapping layer. OpenOBSW
+already exposes PUS Service 5 event reporting capability and OpenSVF already
+exposes YAMCS bridge and PUS Service 5 support. Stage 6.10 records and validates
+that readiness boundary without claiming that the live event/fault runtime path
+is closed.
+
+Validation boundary:
+
+```text
+orbitfabric_models/mission/events.yaml
+-> eps.voltage_out_of_bounds
+
+orbitfabric_models/mission/faults.yaml
+-> eps.voltage_out_of_bounds_fault
+-> emits eps.voltage_out_of_bounds
+
+orbitfabric_models/poc_slice.yaml
+-> OF_EVENT_VOLTAGE_OUT_OF_BOUNDS
+-> event ID 0x5001
+-> PUS Service 5 subtype 3
+
+generated_artifacts/flight_software/mission_contract.h
+-> OF_EVENT_VOLTAGE_OUT_OF_BOUNDS = 0x5001
+
+../openobsw
+-> PUS Service 5 capability
+-> OBSW_S5_MEDIUM = 3
+-> obsw_s5_report()
+
+../opensvf
+-> YamcsBridge TM TCP 10015
+-> YamcsBridge TC UDP 10025
+-> PUS Service 5 helper
+
+execution/yamcs/
+-> OpenSVF-like YAMCS TM/TC boundary
+```
+
+Stage 6.10 does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW
+event delivery into YAMCS, or closed-loop event/fault runtime execution.
 
 ## Reproducibility and Hardening Backlog
 

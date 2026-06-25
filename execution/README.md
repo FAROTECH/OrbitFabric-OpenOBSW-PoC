@@ -173,3 +173,26 @@ as:
 and validates that YAMCS imports the MDB and exposes the HTTP API on port 8090.
 
 This stage does not execute a live OpenSVF/YamcsBridge or OpenOBSW closed-loop TM/TC path.
+
+## Stage 6.10 event/fault runtime path readiness
+
+Stage 6.10 validates the current readiness state of the event/fault path:
+
+    eps.voltage_out_of_bounds
+    -> fault/event materialization
+    -> TM(5,3)
+    -> OpenSVF/YAMCS event or alarm visibility
+
+Validate the readiness boundary with:
+
+    python3 tools/validate_stage6_10_event_fault_runtime_path_readiness.py
+
+The validator checks the PoC Mission Model, PoC mapping, generated flight contract,
+current generated MDB, Stage 6.9 YAMCS candidate configuration, OpenOBSW S5
+capability, and OpenSVF YamcsBridge/PUS S5 capability.
+
+This stage does not execute YAMCS, Renode, CI, a live OpenSVF YamcsBridge, or a
+live OpenOBSW event/fault runtime path.
+
+It records that the event/fault runtime path is technically ready for a future
+runtime smoke, but not yet closed by runtime evidence.
