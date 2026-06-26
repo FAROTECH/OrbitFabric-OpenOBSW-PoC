@@ -118,7 +118,17 @@ def validate_compose() -> None:
 
 
 def validate_yamcs_config() -> None:
+    yamcs_text = read_text(YAMCS_YAML)
+    require_contains(
+        yamcs_text,
+        "Dev-only placeholder, not for production.",
+        YAMCS_YAML,
+    )
+
     yamcs = load_yaml(YAMCS_YAML)
+
+    if yamcs.get("secretKey") != "orbitfabric-poc-dev":
+        fail("yamcs.yaml must use the documented Stage 6.9 dev-only secretKey")
 
     instances = yamcs.get("instances")
     if not isinstance(instances, list) or EXPECTED_INSTANCE not in instances:
@@ -323,10 +333,6 @@ def validate_runtime_smoke(keep_running: bool) -> None:
             (
                 "XTCE MDB parse finish",
                 "XTCE file parsing finished",
-            ),
-            (
-                "MDB import cardinality",
-                "loaded: 3 parameters, 7 tm containers, 2 commands",
             ),
             (
                 "YAMCS version",

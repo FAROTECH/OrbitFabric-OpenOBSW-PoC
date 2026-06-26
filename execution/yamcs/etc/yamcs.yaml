@@ -8,4 +8,5 @@ instances:
   - opensvf
 
 dataDir: /tmp/yamcs-data-poc
+# Dev-only placeholder, not for production.
 secretKey: "orbitfabric-poc-dev"
