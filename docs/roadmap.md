@@ -470,19 +470,46 @@ Stage 6.8 does not launch YAMCS, does not modify OpenSVF or OpenOBSW, and does
 not claim closed-loop YAMCS runtime execution. It prepares the next YAMCS import
 or launch step while preserving the current architectural boundary.
 
-### Candidate Stage 6.9 - YAMCS Runtime Import / Launch
+### Stage 6.9 - Docker-based YAMCS Runtime Candidate
+
+Status: **local PoC-side runtime candidate implemented, closed-loop TM/TC still pending**
+
+Reference:
+
+    docs/stage6_9_yamcs_docker_runtime_candidate.md
+    tools/validate_stage6_9_yamcs_docker_runtime_candidate.py
+    execution/yamcs/
 
 Goal:
 
-Run or import the generated XTCE/MDB artifact through an actual YAMCS-visible
-runtime path.
+Run the generated XTCE/MDB artifact through a concrete YAMCS-visible runtime
+candidate without modifying OpenSVF or OpenOBSW.
 
 Rationale:
 
 Stage 6.8 validates that the runtime-facing MDB handoff exists and is testable.
-The next step is to decide and validate the concrete YAMCS runtime boundary,
-without making OrbitFabric Core emit XTCE directly and without replacing
-OpenSVF's SRDB/XTCE/YAMCS responsibilities.
+Stage 6.9 provides a PoC-side Docker/YAMCS candidate derived from the OpenSVF
+YAMCS runtime pattern.
+
+Validation boundary:
+
+    execution/generated/poc_xtce_mdb.xml
+    -> Docker volume mount
+    -> /yamcs/mdb/poc_xtce_mdb.xml
+    -> YAMCS 5.12.6 container
+    -> XTCE MDB import
+    -> HTTP API readiness on port 8090
+
+The candidate preserves the OpenSVF-like YAMCS boundary:
+
+    TM TCP: 10015
+    TC UDP: 10025
+    PusPacketPreprocessor
+    StreamTmPacketProvider
+    StreamTcCommandReleaser
+
+Stage 6.9 does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW
+telemetry delivery into YAMCS, or closed-loop TC/TM execution.
 
 ### Candidate Stage 6.10 - Event/Fault Runtime Path
 

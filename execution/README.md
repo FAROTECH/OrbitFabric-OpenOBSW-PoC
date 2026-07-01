@@ -147,3 +147,29 @@ The generated evidence is intentionally local and ignored by Git:
 This stage validates OpenSVF observation of `TM(3,25)` and DHS OBC `ParameterStore` visibility through `dhs.obc.obt`.
 
 It does not execute YAMCS, Renode, Docker, CI, event/fault runtime mapping, SRDB package/version-handshake cleanup, or full OrbitFabric housekeeping contract runtime validation for `eps.obc.bus_voltage_mv`.
+
+## Stage 6.9 Docker-based YAMCS runtime candidate
+
+Stage 6.9 adds a PoC-side Docker/YAMCS runtime candidate under:
+
+    execution/yamcs/
+
+Validate the static candidate material with:
+
+    python3 tools/validate_stage6_9_yamcs_docker_runtime_candidate.py
+
+Run the local runtime smoke with:
+
+    python3 tools/validate_stage6_9_yamcs_docker_runtime_candidate.py --runtime-smoke
+
+The candidate starts YAMCS 5.12.6 in Docker, mounts:
+
+    execution/generated/poc_xtce_mdb.xml
+
+as:
+
+    /yamcs/mdb/poc_xtce_mdb.xml
+
+and validates that YAMCS imports the MDB and exposes the HTTP API on port 8090.
+
+This stage does not execute a live OpenSVF/YamcsBridge or OpenOBSW closed-loop TM/TC path.
