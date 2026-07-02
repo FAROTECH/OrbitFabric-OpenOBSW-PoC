@@ -196,3 +196,29 @@ live OpenOBSW event/fault runtime path.
 
 It records that the event/fault runtime path is technically ready for a future
 runtime smoke, but not yet closed by runtime evidence.
+
+## Stage 6.11 YAMCS PUS Service 5 event MDB projection
+
+Stage 6.11 projects the selected PoC event/fault mapping into the local YAMCS MDB:
+
+    eps.voltage_out_of_bounds
+    -> OF_EVENT_VOLTAGE_OUT_OF_BOUNDS = 0x5001
+    -> PUS Service 5 subtype 3
+    -> TM(5,3)
+    -> TM_5_3_Event
+
+Regenerate the local MDB with:
+
+    python3 tools/generate_poc_xtce_mdb.py
+
+Validate the projection with:
+
+    python3 tools/validate_stage6_11_yamcs_s5_event_mdb_projection.py
+
+The validator checks that the generated MDB exposes `of_event_id` and `TM_5_3_Event`, while keeping the boundary explicit.
+
+The Stage 6.9 runtime smoke can then be rerun to confirm that YAMCS imports the updated MDB:
+
+    python3 tools/validate_stage6_9_yamcs_docker_runtime_candidate.py --runtime-smoke
+
+This stage does not run a live OpenSVF YamcsBridge, does not deliver live OpenOBSW events into YAMCS, and does not claim closed-loop event/fault runtime execution.
