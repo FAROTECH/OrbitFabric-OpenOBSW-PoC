@@ -576,6 +576,47 @@ execution/yamcs/
 Stage 6.10 does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW
 event delivery into YAMCS, or closed-loop event/fault runtime execution.
 
+### Stage 6.11 - YAMCS PUS Service 5 Event MDB Projection
+
+Status: **local PoC-side MDB projection implemented, live event/fault runtime evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_11_yamcs_s5_event_mdb_projection.md
+tools/validate_stage6_11_yamcs_s5_event_mdb_projection.py
+tools/generate_poc_xtce_mdb.py
+```
+
+Goal:
+
+Close the Stage 6.10 MDB visibility gap for the selected PoC event/fault path:
+
+```text
+eps.voltage_out_of_bounds
+-> OF_EVENT_VOLTAGE_OUT_OF_BOUNDS = 0x5001
+-> PUS Service 5 subtype 3
+-> TM(5,3)
+-> TM_5_3_Event
+```
+
+Rationale:
+
+Stage 6.10 validated the event/fault readiness boundary. Stage 6.11 projects the selected PUS Service 5 warning event into the local YAMCS MDB so that YAMCS can import a concrete `TM_5_3_Event` sequence container.
+
+Validation boundary:
+
+```text
+OpenSVF base XTCE/MDB generation
+-> PoC-side MDB projection in tools/generate_poc_xtce_mdb.py
+-> of_event_id
+-> TM_5_3_Event
+-> Generated MDB TM(5,3) marker: present
+-> YAMCS Docker runtime import smoke
+```
+
+Stage 6.11 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW event delivery into YAMCS, YAMCS alarm triggering, or closed-loop event/fault runtime execution.
+
 ## Reproducibility and Hardening Backlog
 
 Potential deliverables:
