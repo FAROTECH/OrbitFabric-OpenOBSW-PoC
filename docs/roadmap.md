@@ -721,6 +721,36 @@ OpenSVF requirements
 Stage 6.13 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW packet generation, YAMCS packet consumption, YAMCS MDB classification, parameter/event visibility, or closed-loop runtime execution.
 
 
+### Stage 6.14 - YAMCS Bridge-Compatible TM Producer Smoke
+
+Status: **local runtime link-consumption smoke implemented, MDB classification evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_14_yamcs_bridge_compatible_tm_producer.md
+tools/validate_stage6_14_yamcs_bridge_compatible_tm_producer.py
+execution/yamcs/stage6_14_bridge_tm_producer.py
+execution/yamcs/docker-compose.stage6_14.bridge-producer.yml
+```
+
+Goal:
+
+Validate the Stage 6.13 topology with a bridge-compatible producer:
+
+```text
+bridge-compatible producer
+-> TCP server on 127.0.0.1:10015
+
+YAMCS TcpTmDataLink
+-> TCP client
+-> status OK
+-> dataInCount >= 2
+```
+
+This stage demonstrates YAMCS `TcpTmDataLink` packet consumption through the correct bridge-compatible direction. It does not run the real OpenSVF `YamcsBridge`, does not run live OpenOBSW packet generation, does not claim MDB packet classification, and does not claim parameter/event visibility through the YAMCS API.
+
+
 ## Reproducibility and Hardening Backlog
 
 Potential deliverables:

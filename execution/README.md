@@ -273,3 +273,19 @@ Without a running OpenSVF YamcsBridge or bridge-compatible TM producer, the expe
     tm-in dataInCount: 0
 
 This stage does not run a live OpenSVF YamcsBridge, does not generate packets from live OpenOBSW execution, does not claim YAMCS packet consumption, does not claim YAMCS MDB classification, and does not claim closed-loop runtime execution.
+
+## Stage 6.14 YAMCS bridge-compatible TM producer smoke
+
+Stage 6.14 runs a minimal bridge-compatible TM producer as a Docker Compose sidecar that shares the YAMCS container network namespace.
+
+Validate with:
+
+    python3 tools/validate_stage6_14_yamcs_bridge_compatible_tm_producer.py
+
+Expected successful observation:
+
+    tm-in status: OK
+    tm-in detailedStatus: OK, connected to 127.0.0.1:10015
+    tm-in dataInCount >= 2
+
+This proves YAMCS TcpTmDataLink packet consumption through the correct bridge-compatible direction. It does not run the real OpenSVF YamcsBridge, does not run live OpenOBSW packet generation, does not prove MDB classification, and does not prove parameter/event extraction via the YAMCS API.

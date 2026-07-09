@@ -1,0 +1,18 @@
+services:
+  tm-producer:
+    image: python:3.12-slim
+    depends_on:
+      - yamcs
+    network_mode: "service:yamcs"
+    volumes:
+      - ../../:/workspace/poc:ro
+    working_dir: /workspace/poc
+    command:
+      - python3
+      - execution/yamcs/stage6_14_bridge_tm_producer.py
+      - --cycles
+      - "5"
+      - --delay
+      - "0.5"
+      - --linger
+      - "8.0"
