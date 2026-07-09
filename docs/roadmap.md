@@ -675,6 +675,52 @@ Packet injection attempted: true
 Stage 6.12 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW packet generation, YAMCS `TcpTmDataLink` packet consumption, YAMCS MDB classification observed via API, parameter/event visibility via API, or closed-loop runtime execution.
 
 
+### Stage 6.13 - YAMCS TM Link Topology Discovery
+
+Status: **local topology discovery implemented, YAMCS packet classification evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_13_yamcs_tm_link_topology_discovery.md
+tools/validate_stage6_13_yamcs_tm_link_topology_discovery.py
+```
+
+Goal:
+
+Clarify the actual TM/TC topology required before making YAMCS packet-consumption or classification claims:
+
+```text
+OpenSVF YamcsBridge
+-> TCP server on 127.0.0.1:10015
+-> raw PUS TM packets
+
+YAMCS TcpTmDataLink
+-> TCP client to 127.0.0.1:10015
+-> consumes TM from the bridge
+
+YAMCS UdpTcDataLink
+-> sends TC to OpenSVF UDP server on 127.0.0.1:10025
+```
+
+Rationale:
+
+Stage 6.12 validated representative packet construction and tightened the TCP boundary wording. Stage 6.13 records that the real YAMCS TM link is client-side and requires the OpenSVF `YamcsBridge` or a bridge-compatible TM producer on the other side of port 10015.
+
+Validation boundary:
+
+```text
+OpenSVF requirements
+-> OpenSVF YamcsBridge implementation
+-> OpenSVF YamcsBridge integration tests
+-> OpenSVF YAMCS configuration
+-> PoC YAMCS configuration
+-> optional YAMCS link API observation
+```
+
+Stage 6.13 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW packet generation, YAMCS packet consumption, YAMCS MDB classification, parameter/event visibility, or closed-loop runtime execution.
+
+
 ## Reproducibility and Hardening Backlog
 
 Potential deliverables:

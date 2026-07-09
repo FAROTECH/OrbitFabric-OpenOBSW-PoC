@@ -251,3 +251,25 @@ When the Stage 6.9 YAMCS candidate is running and the exposed TCP boundary accep
     Packet injection attempted: true
 
 This stage does not run a live OpenSVF YamcsBridge, does not generate packets from live OpenOBSW execution, does not claim YAMCS TcpTmDataLink packet consumption, does not claim YAMCS MDB classification observed via API, and does not claim closed-loop runtime execution.
+
+## Stage 6.13 YAMCS TM link topology discovery
+
+Stage 6.13 records the actual OpenSVF/YAMCS TM link topology.
+
+Validate with:
+
+    python3 tools/validate_stage6_13_yamcs_tm_link_topology_discovery.py
+
+The validator checks that the PoC YAMCS candidate mirrors the OpenSVF YAMCS topology:
+
+    OpenSVF YamcsBridge -> TCP server on 127.0.0.1:10015
+    YAMCS tm-in         -> TcpTmDataLink client to 127.0.0.1:10015
+    YAMCS tc-out        -> UdpTcDataLink sender to 127.0.0.1:10025
+
+Without a running OpenSVF YamcsBridge or bridge-compatible TM producer, the expected runtime link state is:
+
+    tm-in status: UNAVAIL
+    tm-in detailedStatus: Not connected to 127.0.0.1:10015
+    tm-in dataInCount: 0
+
+This stage does not run a live OpenSVF YamcsBridge, does not generate packets from live OpenOBSW execution, does not claim YAMCS packet consumption, does not claim YAMCS MDB classification, and does not claim closed-loop runtime execution.
