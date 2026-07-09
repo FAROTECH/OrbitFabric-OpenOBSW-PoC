@@ -222,3 +222,32 @@ The Stage 6.9 runtime smoke can then be rerun to confirm that YAMCS imports the 
     python3 tools/validate_stage6_9_yamcs_docker_runtime_candidate.py --runtime-smoke
 
 This stage does not run a live OpenSVF YamcsBridge, does not deliver live OpenOBSW events into YAMCS, and does not claim closed-loop event/fault runtime execution.
+
+## Stage 6.12 YAMCS contract packet visibility probe
+
+Stage 6.12 adds a local PoC-side representative packet probe for the YAMCS candidate.
+
+It covers both sides of the vertical slice:
+
+    TM(3,25) -> TM_3_25_HK
+    TM(5,3)  -> TM_5_3_Event -> of_event_id = 0x5001
+
+Regenerate the local MDB with:
+
+    python3 tools/generate_poc_xtce_mdb.py
+
+Validate the probe with:
+
+    python3 tools/validate_stage6_12_yamcs_contract_packet_visibility_probe.py
+
+The validator checks the generated MDB contract, representative packet bytes, and attempts a TCP write toward the currently exposed YAMCS boundary.
+
+When YAMCS is not running, the validator passes with:
+
+    Packet injection attempted: false
+
+When the Stage 6.9 YAMCS candidate is running and the exposed TCP boundary accepts the probe connection, the validator can pass with:
+
+    Packet injection attempted: true
+
+This stage does not run a live OpenSVF YamcsBridge, does not generate packets from live OpenOBSW execution, does not claim YAMCS TcpTmDataLink packet consumption, does not claim YAMCS MDB classification observed via API, and does not claim closed-loop runtime execution.

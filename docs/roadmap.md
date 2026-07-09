@@ -617,6 +617,64 @@ OpenSVF base XTCE/MDB generation
 
 Stage 6.11 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW event delivery into YAMCS, YAMCS alarm triggering, or closed-loop event/fault runtime execution.
 
+### Stage 6.12 - YAMCS Contract Packet Visibility Probe
+
+Status: **local PoC-side representative packet probe implemented, YAMCS classification evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_12_yamcs_contract_packet_visibility_probe.md
+tools/validate_stage6_12_yamcs_contract_packet_visibility_probe.py
+```
+
+Goal:
+
+Validate the YAMCS candidate packet input boundary for both sides of the original vertical slice before adding live OpenSVF/YamcsBridge machinery:
+
+```text
+Representative TM(3,25)
+-> YAMCS candidate TCP TM input
+-> generated MDB contract
+-> TM_3_25_HK packet visibility readiness
+
+Representative TM(5,3)
+-> YAMCS candidate TCP TM input
+-> generated MDB contract
+-> TM_5_3_Event packet visibility readiness
+-> of_event_id = 0x5001 packet field readiness
+```
+
+Rationale:
+
+Stage 6.11 projected the selected PUS Service 5 warning event into the generated local YAMCS MDB. Stage 6.12 adds a small PoC-side representative packet probe that validates the contract packet bytes and attempts to write them toward the currently exposed YAMCS TCP boundary.
+
+Validation boundary:
+
+```text
+generated XTCE/MDB
+-> PUS_Packet offsets
+-> TM_3_25_HK restrictions
+-> TM_5_3_Event restrictions
+-> representative packet bytes
+-> optional TCP send to YAMCS candidate port 10015
+```
+
+When the YAMCS candidate is not running, the validator still passes with:
+
+```text
+Packet injection attempted: false
+```
+
+When the YAMCS candidate is running and the exposed TCP boundary accepts the probe connection, the validator can report:
+
+```text
+Packet injection attempted: true
+```
+
+Stage 6.12 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW packet generation, YAMCS `TcpTmDataLink` packet consumption, YAMCS MDB classification observed via API, parameter/event visibility via API, or closed-loop runtime execution.
+
+
 ## Reproducibility and Hardening Backlog
 
 Potential deliverables:

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import yaml
 
@@ -32,8 +32,11 @@ EVENT_CONTAINER = "TM_5_3_Event"
 XTCE_NS = {"xtce": "http://www.omg.org/spec/XTCE/20180204"}
 
 
-def fail(message: str) -> None:
-    raise SystemExit(f"Stage 6.11 validation failed: {message}")
+def fail(message: str) -> NoReturn:
+    raise SystemExit(
+        "Stage 6.11 YAMCS PUS Service 5 event MDB projection: FAIL\n"
+        f"{message}"
+    )
 
 
 def read_text(path: Path) -> str:
