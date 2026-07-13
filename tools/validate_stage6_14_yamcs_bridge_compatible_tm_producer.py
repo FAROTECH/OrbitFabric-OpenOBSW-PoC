@@ -88,6 +88,7 @@ def validate_static_inputs() -> None:
             "TM(3,25)",
             "TM(5,3)",
             "b\"\\x50\\x01\"",
+            "bytes([0x20",
             "conn.sendall(packet)",
         ],
     )

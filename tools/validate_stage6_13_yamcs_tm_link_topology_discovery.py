@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -13,7 +14,9 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-OPENSVF_ROOT = (REPO_ROOT / "../opensvf").resolve()
+OPENSVF_ROOT = Path(
+    os.environ.get("OPENSVF_ROOT", str(REPO_ROOT / "../opensvf"))
+).resolve()
 
 OPENSVF_REQUIREMENTS = OPENSVF_ROOT / "REQUIREMENTS.md"
 OPENSVF_BRIDGE = OPENSVF_ROOT / "src" / "svf" / "ground" / "yamcs_bridge.py"
@@ -22,6 +25,22 @@ OPENSVF_YAMCS_CONFIG = OPENSVF_ROOT / "yamcs" / "etc" / "yamcs.opensvf.yaml"
 
 POC_YAMCS_CONFIG = REPO_ROOT / "execution" / "yamcs" / "etc" / "yamcs.opensvf.yaml"
 DOC_PATH = REPO_ROOT / "docs" / "stage6_13_yamcs_tm_link_topology_discovery.md"
+
+
+EXPECTED_TM_LINK = {
+    "class": "org.yamcs.tctm.TcpTmDataLink",
+    "host": "127.0.0.1",
+    "port": 10015,
+    "stream": "tm_realtime",
+    "packetPreprocessorClassName": "org.yamcs.pus.PusPacketPreprocessor",
+}
+
+EXPECTED_TC_LINK = {
+    "class": "org.yamcs.tctm.UdpTcDataLink",
+    "host": "127.0.0.1",
+    "port": 10025,
+    "stream": "tc_realtime",
+}
 
 
 def fail(message: str) -> NoReturn:
@@ -64,6 +83,28 @@ def get_link(config: dict[str, Any], name: str, path: Path) -> dict[str, Any]:
         if isinstance(link, dict) and link.get("name") == name:
             return link
     fail(f"{path} missing data link: {name}")
+
+
+def validate_expected_link(
+    link: dict[str, Any],
+    expected_values: dict[str, Any],
+    label: str,
+) -> None:
+    for key, expected in expected_values.items():
+        if link.get(key) != expected:
+            fail(f"Unexpected {label} {key}: {link.get(key)}")
+
+
+def validate_expected_tm_link(link: dict[str, Any], label: str) -> None:
+    validate_expected_link(link, EXPECTED_TM_LINK, label)
+
+    args = link.get("packetPreprocessorArgs")
+    if not isinstance(args, dict) or args.get("useLocalGenerationTime") is not True:
+        fail(f"{label} must set useLocalGenerationTime: true")
+
+
+def validate_expected_tc_link(link: dict[str, Any], label: str) -> None:
+    validate_expected_link(link, EXPECTED_TC_LINK, label)
 
 
 def validate_opensvf_requirements() -> None:
@@ -121,45 +162,24 @@ def validate_opensvf_bridge_tests() -> None:
     )
 
 
-def validate_yamcs_configs() -> None:
-    opensvf = load_yaml(OPENSVF_YAMCS_CONFIG)
-    poc = load_yaml(POC_YAMCS_CONFIG)
+def validate_opensvf_yamcs_config() -> None:
+    config = load_yaml(OPENSVF_YAMCS_CONFIG)
 
-    opensvf_tm = get_link(opensvf, "tm-in", OPENSVF_YAMCS_CONFIG)
-    poc_tm = get_link(poc, "tm-in", POC_YAMCS_CONFIG)
+    tm_link = get_link(config, "tm-in", OPENSVF_YAMCS_CONFIG)
+    tc_link = get_link(config, "tc-out", OPENSVF_YAMCS_CONFIG)
 
-    expected_tm = {
-        "class": "org.yamcs.tctm.TcpTmDataLink",
-        "host": "127.0.0.1",
-        "port": 10015,
-        "stream": "tm_realtime",
-        "packetPreprocessorClassName": "org.yamcs.pus.PusPacketPreprocessor",
-    }
-    for key, expected in expected_tm.items():
-        if opensvf_tm.get(key) != expected:
-            fail(f"Unexpected OpenSVF tm-in {key}: {opensvf_tm.get(key)}")
-        if poc_tm.get(key) != expected:
-            fail(f"Unexpected PoC tm-in {key}: {poc_tm.get(key)}")
+    validate_expected_tm_link(tm_link, "OpenSVF tm-in")
+    validate_expected_tc_link(tc_link, "OpenSVF tc-out")
 
-    for label, link in [("OpenSVF", opensvf_tm), ("PoC", poc_tm)]:
-        args = link.get("packetPreprocessorArgs")
-        if not isinstance(args, dict) or args.get("useLocalGenerationTime") is not True:
-            fail(f"{label} tm-in must set useLocalGenerationTime: true")
 
-    opensvf_tc = get_link(opensvf, "tc-out", OPENSVF_YAMCS_CONFIG)
-    poc_tc = get_link(poc, "tc-out", POC_YAMCS_CONFIG)
+def validate_poc_yamcs_config() -> None:
+    config = load_yaml(POC_YAMCS_CONFIG)
 
-    expected_tc = {
-        "class": "org.yamcs.tctm.UdpTcDataLink",
-        "host": "127.0.0.1",
-        "port": 10025,
-        "stream": "tc_realtime",
-    }
-    for key, expected in expected_tc.items():
-        if opensvf_tc.get(key) != expected:
-            fail(f"Unexpected OpenSVF tc-out {key}: {opensvf_tc.get(key)}")
-        if poc_tc.get(key) != expected:
-            fail(f"Unexpected PoC tc-out {key}: {poc_tc.get(key)}")
+    tm_link = get_link(config, "tm-in", POC_YAMCS_CONFIG)
+    tc_link = get_link(config, "tc-out", POC_YAMCS_CONFIG)
+
+    validate_expected_tm_link(tm_link, "PoC tm-in")
+    validate_expected_tc_link(tc_link, "PoC tc-out")
 
 
 def validate_doc() -> None:
@@ -205,10 +225,20 @@ def fetch_optional_link_state() -> dict[str, Any] | None:
 
 
 def main() -> int:
-    validate_opensvf_requirements()
-    validate_opensvf_bridge_implementation()
-    validate_opensvf_bridge_tests()
-    validate_yamcs_configs()
+    opensvf_present = OPENSVF_ROOT.is_dir()
+
+    if opensvf_present:
+        validate_opensvf_requirements()
+        validate_opensvf_bridge_implementation()
+        validate_opensvf_bridge_tests()
+        validate_opensvf_yamcs_config()
+    else:
+        print(
+            f"NOTICE: OpenSVF repo not found at {OPENSVF_ROOT} "
+            "— skipping OpenSVF topology checks"
+        )
+
+    validate_poc_yamcs_config()
     validate_doc()
 
     link_state = fetch_optional_link_state()
@@ -216,10 +246,11 @@ def main() -> int:
     print("Stage 6.13 YAMCS TM link topology discovery")
     print(f"Repository root: {REPO_ROOT}")
     print(f"OpenSVF repository: {OPENSVF_ROOT}")
+    print(f"OpenSVF topology checks observed: {str(opensvf_present).lower()}")
     print("OpenSVF YamcsBridge TM role: TCP server on 127.0.0.1:10015")
     print("YAMCS tm-in role: TcpTmDataLink client to 127.0.0.1:10015")
     print("TC role: YAMCS UdpTcDataLink sends to OpenSVF UDP server on 127.0.0.1:10025")
-    print("PoC YAMCS config mirrors OpenSVF tm-in/tc-out topology: true")
+    print("PoC YAMCS config matches expected tm-in/tc-out topology: true")
     if link_state is None:
         print("Runtime YAMCS link API observed: false")
     else:

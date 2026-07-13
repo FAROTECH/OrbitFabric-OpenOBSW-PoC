@@ -55,6 +55,8 @@ test_bridge_sends_tm_to_yamcs
 test_bridge_receives_tc_from_yamcs
 ```
 
+The OpenSVF repository is treated as an optional sibling checkout for validation. If `../opensvf` is absent, OpenSVF-dependent topology checks are soft-skipped with a `NOTICE`; the PoC-local YAMCS configuration and this stage documentation are still validated.
+
 The local PoC YAMCS candidate mirrors the OpenSVF YAMCS link configuration:
 
 ```text

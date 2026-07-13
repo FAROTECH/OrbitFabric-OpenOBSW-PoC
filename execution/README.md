@@ -260,6 +260,8 @@ Validate with:
 
     python3 tools/validate_stage6_13_yamcs_tm_link_topology_discovery.py
 
+If the sibling `../opensvf` checkout is absent, OpenSVF-dependent topology checks are soft-skipped with a NOTICE while PoC-local checks still run.
+
 The validator checks that the PoC YAMCS candidate mirrors the OpenSVF YAMCS topology:
 
     OpenSVF YamcsBridge -> TCP server on 127.0.0.1:10015

@@ -40,7 +40,7 @@ def build_tm_packet(
     """
     ccsds_first = 0x0800 | 0x0010  # version=0, TM, secondary header, APID=0x010
     ccsds_seq = 0xC000 | (seq & 0x3FFF)
-    pus_secondary = bytes([0x10, service & 0xFF, subservice & 0xFF, 0x00, 0x00])
+    pus_secondary = bytes([0x20, service & 0xFF, subservice & 0xFF, 0x00, 0x00])
     payload = pus_secondary + app_data
     ccsds_length = len(payload) - 1
     primary = struct.pack(">HHH", ccsds_first, ccsds_seq, ccsds_length)

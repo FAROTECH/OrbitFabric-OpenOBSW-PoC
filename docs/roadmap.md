@@ -716,6 +716,7 @@ OpenSVF requirements
 -> OpenSVF YAMCS configuration
 -> PoC YAMCS configuration
 -> optional YAMCS link API observation
+-> OpenSVF sibling repo soft-skip when absent
 ```
 
 Stage 6.13 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW packet generation, YAMCS packet consumption, YAMCS MDB classification, parameter/event visibility, or closed-loop runtime execution.

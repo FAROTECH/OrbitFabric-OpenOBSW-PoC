@@ -40,6 +40,8 @@ TM(3,25) - housekeeping visibility side
 TM(5,3)  - event visibility side
 ```
 
+The representative packets use the same PUS-C secondary header version byte (`0x20`) as Stage 6.12.
+
 The `TM(5,3)` packet carries the representative PoC event identifier:
 
 ```text
