@@ -322,3 +322,30 @@ python3 tools/validate_stage6_16_real_opensvf_yamcsbridge_tm_path_probe.py
 ```
 
 If `../opensvf` is absent, OpenSVF-dependent runtime checks are soft-skipped with a `NOTICE`.
+
+## Stage 6.17 live OpenOBSW HK TM to YAMCS path
+
+Stage 6.17 runs the live OpenOBSW housekeeping telemetry path inside the YAMCS Docker runtime.
+
+```bash
+python3 tools/validate_stage6_17_live_openobsw_hk_tm_yamcs_path_probe.py
+```
+
+The validator always checks the PoC-local documentation, compose override, and driver. The live runtime probe is optional with respect to sibling repositories and is skipped with an explicit `NOTICE` if `../opensvf` or `../openobsw` is not present.
+
+When both sibling repositories are present, the validator builds Linux `obsw_sim` inside the sidecar container, starts the real OpenSVF `OBCEmulatorAdapter` in pipe mode, attaches the real `YamcsBridge`, and validates YAMCS packet archive/classification evidence for live `TM(3,25)`.
+
+### Stage 6.17 cold-Docker timeout override
+
+Stage 6.17 starts a sidecar from a dedicated cached Docker image that already
+contains the Ubuntu runtime/build tooling required by the live OpenOBSW HK
+driver. On fresh Docker environments the first image build can still be slow;
+the driver-marker wait can be extended with:
+
+```bash
+STAGE617_DRIVER_MARKER_TIMEOUT_S=2400 \
+python3 tools/validate_stage6_17_live_openobsw_hk_tm_yamcs_path_probe.py
+```
+
+This parameter only affects how long the validator waits for the driver to reach
+the real `YamcsBridge` attachment point. Evidence checks remain unchanged.
