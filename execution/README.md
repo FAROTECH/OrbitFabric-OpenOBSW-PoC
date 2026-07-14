@@ -222,3 +222,72 @@ The Stage 6.9 runtime smoke can then be rerun to confirm that YAMCS imports the 
     python3 tools/validate_stage6_9_yamcs_docker_runtime_candidate.py --runtime-smoke
 
 This stage does not run a live OpenSVF YamcsBridge, does not deliver live OpenOBSW events into YAMCS, and does not claim closed-loop event/fault runtime execution.
+
+## Stage 6.12 YAMCS contract packet visibility probe
+
+Stage 6.12 adds a local PoC-side representative packet probe for the YAMCS candidate.
+
+It covers both sides of the vertical slice:
+
+    TM(3,25) -> TM_3_25_HK
+    TM(5,3)  -> TM_5_3_Event -> of_event_id = 0x5001
+
+Regenerate the local MDB with:
+
+    python3 tools/generate_poc_xtce_mdb.py
+
+Validate the probe with:
+
+    python3 tools/validate_stage6_12_yamcs_contract_packet_visibility_probe.py
+
+The validator checks the generated MDB contract, representative packet bytes, and attempts a TCP write toward the currently exposed YAMCS boundary.
+
+When YAMCS is not running, the validator passes with:
+
+    Packet injection attempted: false
+
+When the Stage 6.9 YAMCS candidate is running and the exposed TCP boundary accepts the probe connection, the validator can pass with:
+
+    Packet injection attempted: true
+
+This stage does not run a live OpenSVF YamcsBridge, does not generate packets from live OpenOBSW execution, does not claim YAMCS TcpTmDataLink packet consumption, does not claim YAMCS MDB classification observed via API, and does not claim closed-loop runtime execution.
+
+## Stage 6.13 YAMCS TM link topology discovery
+
+Stage 6.13 records the actual OpenSVF/YAMCS TM link topology.
+
+Validate with:
+
+    python3 tools/validate_stage6_13_yamcs_tm_link_topology_discovery.py
+
+If the sibling `../opensvf` checkout is absent, OpenSVF-dependent topology checks are soft-skipped with a NOTICE while PoC-local checks still run.
+
+The validator checks that the PoC YAMCS candidate mirrors the OpenSVF YAMCS topology:
+
+    OpenSVF YamcsBridge -> TCP server on 127.0.0.1:10015
+    YAMCS tm-in         -> TcpTmDataLink client to 127.0.0.1:10015
+    YAMCS tc-out        -> UdpTcDataLink sender to 127.0.0.1:10025
+
+Without a running OpenSVF YamcsBridge or bridge-compatible TM producer, the expected runtime link state is:
+
+    tm-in status: UNAVAIL
+    tm-in detailedStatus: Not connected to 127.0.0.1:10015
+    tm-in dataInCount: 0
+
+This stage does not run a live OpenSVF YamcsBridge, does not generate packets from live OpenOBSW execution, does not claim YAMCS packet consumption, does not claim YAMCS MDB classification, and does not claim closed-loop runtime execution.
+
+## Stage 6.14 YAMCS bridge-compatible TM producer smoke
+
+Stage 6.14 runs a minimal bridge-compatible TM producer as a Docker Compose sidecar that shares the YAMCS container network namespace.
+
+Validate with:
+
+    python3 tools/validate_stage6_14_yamcs_bridge_compatible_tm_producer.py
+
+Expected successful observation:
+
+    tm-in status: OK
+    tm-in detailedStatus: OK, connected to 127.0.0.1:10015
+    tm-in dataInCount >= 2
+
+This proves YAMCS TcpTmDataLink packet consumption through the correct bridge-compatible direction. It does not run the real OpenSVF YamcsBridge, does not run live OpenOBSW packet generation, does not prove MDB classification, and does not prove parameter/event extraction via the YAMCS API.

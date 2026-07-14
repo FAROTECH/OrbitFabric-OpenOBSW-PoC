@@ -617,6 +617,141 @@ OpenSVF base XTCE/MDB generation
 
 Stage 6.11 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW event delivery into YAMCS, YAMCS alarm triggering, or closed-loop event/fault runtime execution.
 
+### Stage 6.12 - YAMCS Contract Packet Visibility Probe
+
+Status: **local PoC-side representative packet probe implemented, YAMCS classification evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_12_yamcs_contract_packet_visibility_probe.md
+tools/validate_stage6_12_yamcs_contract_packet_visibility_probe.py
+```
+
+Goal:
+
+Validate the YAMCS candidate packet input boundary for both sides of the original vertical slice before adding live OpenSVF/YamcsBridge machinery:
+
+```text
+Representative TM(3,25)
+-> YAMCS candidate TCP TM input
+-> generated MDB contract
+-> TM_3_25_HK packet visibility readiness
+
+Representative TM(5,3)
+-> YAMCS candidate TCP TM input
+-> generated MDB contract
+-> TM_5_3_Event packet visibility readiness
+-> of_event_id = 0x5001 packet field readiness
+```
+
+Rationale:
+
+Stage 6.11 projected the selected PUS Service 5 warning event into the generated local YAMCS MDB. Stage 6.12 adds a small PoC-side representative packet probe that validates the contract packet bytes and attempts to write them toward the currently exposed YAMCS TCP boundary.
+
+Validation boundary:
+
+```text
+generated XTCE/MDB
+-> PUS_Packet offsets
+-> TM_3_25_HK restrictions
+-> TM_5_3_Event restrictions
+-> representative packet bytes
+-> optional TCP send to YAMCS candidate port 10015
+```
+
+When the YAMCS candidate is not running, the validator still passes with:
+
+```text
+Packet injection attempted: false
+```
+
+When the YAMCS candidate is running and the exposed TCP boundary accepts the probe connection, the validator can report:
+
+```text
+Packet injection attempted: true
+```
+
+Stage 6.12 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW packet generation, YAMCS `TcpTmDataLink` packet consumption, YAMCS MDB classification observed via API, parameter/event visibility via API, or closed-loop runtime execution.
+
+
+### Stage 6.13 - YAMCS TM Link Topology Discovery
+
+Status: **local topology discovery implemented, YAMCS packet classification evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_13_yamcs_tm_link_topology_discovery.md
+tools/validate_stage6_13_yamcs_tm_link_topology_discovery.py
+```
+
+Goal:
+
+Clarify the actual TM/TC topology required before making YAMCS packet-consumption or classification claims:
+
+```text
+OpenSVF YamcsBridge
+-> TCP server on 127.0.0.1:10015
+-> raw PUS TM packets
+
+YAMCS TcpTmDataLink
+-> TCP client to 127.0.0.1:10015
+-> consumes TM from the bridge
+
+YAMCS UdpTcDataLink
+-> sends TC to OpenSVF UDP server on 127.0.0.1:10025
+```
+
+Rationale:
+
+Stage 6.12 validated representative packet construction and tightened the TCP boundary wording. Stage 6.13 records that the real YAMCS TM link is client-side and requires the OpenSVF `YamcsBridge` or a bridge-compatible TM producer on the other side of port 10015.
+
+Validation boundary:
+
+```text
+OpenSVF requirements
+-> OpenSVF YamcsBridge implementation
+-> OpenSVF YamcsBridge integration tests
+-> OpenSVF YAMCS configuration
+-> PoC YAMCS configuration
+-> optional YAMCS link API observation
+-> OpenSVF sibling repo soft-skip when absent
+```
+
+Stage 6.13 does not modify OpenSVF, OpenOBSW, or OrbitFabric Core. It does not claim live OpenSVF/YamcsBridge execution, live OpenOBSW packet generation, YAMCS packet consumption, YAMCS MDB classification, parameter/event visibility, or closed-loop runtime execution.
+
+
+### Stage 6.14 - YAMCS Bridge-Compatible TM Producer Smoke
+
+Status: **local runtime link-consumption smoke implemented, MDB classification evidence still pending**
+
+Reference:
+
+```text
+docs/stage6_14_yamcs_bridge_compatible_tm_producer.md
+tools/validate_stage6_14_yamcs_bridge_compatible_tm_producer.py
+execution/yamcs/stage6_14_bridge_tm_producer.py
+execution/yamcs/docker-compose.stage6_14.bridge-producer.yml
+```
+
+Goal:
+
+Validate the Stage 6.13 topology with a bridge-compatible producer:
+
+```text
+bridge-compatible producer
+-> TCP server on 127.0.0.1:10015
+
+YAMCS TcpTmDataLink
+-> TCP client
+-> status OK
+-> dataInCount >= 2
+```
+
+This stage demonstrates YAMCS `TcpTmDataLink` packet consumption through the correct bridge-compatible direction. It does not run the real OpenSVF `YamcsBridge`, does not run live OpenOBSW packet generation, does not claim MDB packet classification, and does not claim parameter/event visibility through the YAMCS API.
+
+
 ## Reproducibility and Hardening Backlog
 
 Potential deliverables:
