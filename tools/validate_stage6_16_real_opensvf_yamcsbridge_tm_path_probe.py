@@ -305,7 +305,7 @@ def fetch_archive_packets() -> list[dict[str, Any]]:
         packets = response.get("packet")
 
     if not isinstance(packets, list):
-        fail(f"Unexpected packet archive response: {response}")
+        raise ValueError(f"Unexpected packet archive response: {response}")
 
     return [packet for packet in packets if isinstance(packet, dict)]
 
