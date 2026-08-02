@@ -782,3 +782,34 @@ The initial PoC does not attempt to:
 * replace OpenSVF's SRDB/XTCE/YAMCS responsibilities;
 * replace OpenOBSW runtime behavior;
 * introduce OrbitFabric Studio as a runtime dependency.
+
+### Stage 6.15 - YAMCS Archive and MDB Classification Probe
+
+Status: local stacked branch / pending PR #23 merge.
+
+Goal:
+
+```text
+Stage 6.14 bridge-compatible producer
+-> YAMCS tm-in TcpTmDataLink
+-> YAMCS packet archive API
+-> representative raw TM packet visibility
+-> MDB leaf-container classification evidence
+```
+
+This stage intentionally combines the packet archive visibility and MDB packet classification evidence steps. It still does not claim live OpenSVF YamcsBridge execution, live OpenOBSW packet generation, parameter/event API extraction, or closed-loop runtime execution.
+
+### Stage 6.16 - Real OpenSVF YamcsBridge TM Path Probe
+
+Status: local stacked branch / pending PR #23 merge.
+
+Goal:
+
+```text
+real OpenSVF YamcsBridge
+-> YAMCS tm-in TcpTmDataLink
+-> YAMCS packet archive API
+-> MDB packet classification evidence
+```
+
+This stage replaces the Stage 6.14/6.15 bridge-compatible producer with the real OpenSVF YamcsBridge while still sending representative packets. It does not claim live OpenOBSW packet generation, OpenSVF campaign closed-loop execution, YAMCS TC command path execution, parameter/event API extraction, or production hardening.

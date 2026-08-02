@@ -291,3 +291,34 @@ Expected successful observation:
     tm-in dataInCount >= 2
 
 This proves YAMCS TcpTmDataLink packet consumption through the correct bridge-compatible direction. It does not run the real OpenSVF YamcsBridge, does not run live OpenOBSW packet generation, does not prove MDB classification, and does not prove parameter/event extraction via the YAMCS API.
+
+## Stage 6.15 - YAMCS Archive and MDB Classification Probe
+
+Stage 6.15 reuses the bridge-compatible Stage 6.14 producer with a longer packet stream and checks YAMCS archive/classification visibility through:
+
+```text
+GET /api/archive/opensvf/packets
+GET /api/mdb/opensvf/containers
+```
+
+Run locally with Docker available:
+
+```bash
+python3 tools/validate_stage6_15_yamcs_archive_and_mdb_classification_probe.py
+```
+
+## Stage 6.16 - Real OpenSVF YamcsBridge TM Path Probe
+
+Stage 6.16 replaces the bridge-compatible Stage 6.14/6.15 producer with the real OpenSVF `YamcsBridge` imported from the sibling OpenSVF checkout:
+
+```text
+../opensvf/src/svf/ground/yamcs_bridge.py
+```
+
+Run locally with Docker and `../opensvf` available:
+
+```bash
+python3 tools/validate_stage6_16_real_opensvf_yamcsbridge_tm_path_probe.py
+```
+
+If `../opensvf` is absent, OpenSVF-dependent runtime checks are soft-skipped with a `NOTICE`.
