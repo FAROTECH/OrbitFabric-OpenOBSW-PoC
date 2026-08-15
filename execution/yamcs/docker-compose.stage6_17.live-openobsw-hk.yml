@@ -1,0 +1,40 @@
+services:
+  live-openobsw-hk:
+    image: orbitfabric-stage6-17-live-openobsw-hk:local
+    build:
+      context: .
+      dockerfile: Dockerfile.stage6_17.live-openobsw-hk
+    depends_on:
+      - yamcs
+    network_mode: "service:yamcs"
+    volumes:
+      - ../../:/workspace/poc:ro
+      - ${OPENSVF_ROOT:-../../../opensvf}:/workspace/opensvf:ro
+      - ${OPENOBSW_ROOT:-../../../openobsw}:/workspace/openobsw:ro
+    working_dir: /workspace/poc
+    environment:
+      DEBIAN_FRONTEND: noninteractive
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+
+        echo "== Stage 6.17 sidecar: runtime/build tooling already present in cached image =="
+
+        echo "== Stage 6.17 sidecar: install OpenOBSW SRDB package =="
+        rm -rf /tmp/openobsw-srdb
+        cp -a /workspace/openobsw/srdb /tmp/openobsw-srdb
+        python3 -m pip install --break-system-packages /tmp/openobsw-srdb >/dev/null
+
+        echo "== Stage 6.17 sidecar: run live OpenOBSW HK driver =="
+        python3 execution/yamcs/stage6_17_live_openobsw_hk_driver.py \
+          --opensvf-root /workspace/opensvf \
+          --openobsw-root /workspace/openobsw \
+          --build-dir /tmp/openobsw-stage617-build \
+          --steps 45 \
+          --dt 1.0 \
+          --startup-delay 5.0 \
+          --step-delay 0.05 \
+          --linger 12.0 \
+          --apid 0x103
