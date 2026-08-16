@@ -30,17 +30,24 @@ def build_tm_packet(
 ) -> bytes:
     """Build a minimal CCSDS/PUS-like TM packet for the PoC MDB.
 
-    Current PoC MDB assumptions:
+    Current PoC MDB/live OpenOBSW-compatible assumptions:
       * 6-byte CCSDS primary header
-      * 5-byte PUS-C secondary header
-      * application data starts after byte offset 11 / bit offset 88
+      * 11-byte PUS-C TM secondary header
+      * application data starts after byte offset 17 / bit offset 136
 
     This packet is representative for link-level YAMCS consumption smoke,
     not evidence of live OpenOBSW/OpenSVF packet generation.
     """
     ccsds_first = 0x0800 | 0x0010  # version=0, TM, secondary header, APID=0x010
     ccsds_seq = 0xC000 | (seq & 0x3FFF)
-    pus_secondary = bytes([0x20, service & 0xFF, subservice & 0xFF, 0x00, 0x00])
+    pus_secondary = bytes([
+        0x20,
+        service & 0xFF,
+        subservice & 0xFF,
+        0x00, 0x00,              # message type counter
+        0x00, 0x00,              # destination id
+        0x00, 0x00, 0x00, 0x00,  # timestamp
+    ])
     payload = pus_secondary + app_data
     ccsds_length = len(payload) - 1
     primary = struct.pack(">HHH", ccsds_first, ccsds_seq, ccsds_length)

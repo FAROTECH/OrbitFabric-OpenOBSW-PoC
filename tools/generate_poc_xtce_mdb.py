@@ -50,7 +50,7 @@ S5_TM_5_3_CONTAINER_XML = """
         <EntryList>
           <ParameterRefEntry parameterRef="of_event_id">
             <LocationInContainerInBits referenceLocation="containerStart">
-              <FixedValue>88</FixedValue>
+              <FixedValue>136</FixedValue>
             </LocationInContainerInBits>
           </ParameterRefEntry>
         </EntryList>

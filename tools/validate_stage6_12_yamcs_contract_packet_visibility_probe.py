@@ -47,9 +47,18 @@ def build_representative_tm_packet(service: int, subservice: int, payload: bytes
     - byte 6: PUS version/spare
     - byte 7: PUS service
     - byte 8: PUS subservice
-    - event ID starts at byte 11 / bit offset 88
+    - bytes 9-10: message type counter
+    - bytes 11-16: destination id + timestamp placeholder
+    - event ID starts at byte 17 / bit offset 136
     """
-    secondary_header = bytes([0x20, service, subservice, 0x00, 0x00])
+    secondary_header = bytes([
+        0x20,
+        service,
+        subservice,
+        0x00, 0x00,              # message type counter
+        0x00, 0x00,              # destination id
+        0x00, 0x00, 0x00, 0x00,  # timestamp
+    ])
     data = secondary_header + payload
     packet_length = len(data) - 1
 
@@ -142,7 +151,7 @@ def validate_mdb_contract() -> None:
 
     require_restriction(event, "pus_svc", "5")
     require_restriction(event, "pus_subsvc", "3")
-    require_fixed_offset(event, EVENT_PARAMETER, "88")
+    require_fixed_offset(event, EVENT_PARAMETER, "136")
 
 
 def validate_yamcs_tm_input_boundary() -> None:
@@ -168,7 +177,7 @@ def validate_packet_bytes() -> None:
     if event_packet[7] != 5 or event_packet[8] != 3:
         fail(f"Representative event packet does not encode TM(5,3): {event_packet.hex()}")
 
-    event_id = int.from_bytes(event_packet[11:13], byteorder="big")
+    event_id = int.from_bytes(event_packet[17:19], byteorder="big")
     if event_id != EVENT_ID_VALUE:
         fail(f"Representative event packet does not encode event ID 0x5001: 0x{event_id:04x}")
 
