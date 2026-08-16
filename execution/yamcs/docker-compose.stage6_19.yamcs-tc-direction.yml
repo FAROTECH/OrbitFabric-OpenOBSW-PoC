@@ -1,0 +1,35 @@
+services:
+  yamcs-tc-direction:
+    image: orbitfabric-stage6-19-yamcs-tc-direction:local
+    build:
+      context: .
+      dockerfile: Dockerfile.stage6_19.yamcs-tc-direction
+    depends_on:
+      - yamcs
+    network_mode: "service:yamcs"
+    volumes:
+      - ../../:/workspace/poc:ro
+      - ${OPENSVF_ROOT:-../../../opensvf}:/workspace/opensvf:ro
+      - ${OPENOBSW_ROOT:-../../../openobsw}:/workspace/openobsw:ro
+    working_dir: /workspace/poc
+    command:
+      - python3
+      - execution/yamcs/stage6_19_yamcs_tc_direction_driver.py
+      - --opensvf-root
+      - /workspace/opensvf
+      - --openobsw-root
+      - /workspace/openobsw
+      - --build-dir
+      - /tmp/openobsw-stage619-build
+      - --steps
+      - "45"
+      - --dt
+      - "1.0"
+      - --startup-delay
+      - "5.0"
+      - --step-delay
+      - "0.05"
+      - --linger
+      - "12.0"
+      - --apid
+      - "0x103"
