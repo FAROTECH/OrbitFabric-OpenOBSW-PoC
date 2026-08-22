@@ -186,8 +186,8 @@ def validate_mdb_projection(root: ET.Element) -> None:
         ".//xtce:FixedValue",
         f"{EVENT_CONTAINER} event id bit offset",
     )
-    if fixed.text != "88":
-        fail(f"{EVENT_CONTAINER} event id must start at bit offset 88")
+    if fixed.text != "136":
+        fail(f"{EVENT_CONTAINER} event id must start at bit offset 136")
 
 
 def validate_existing_markers(root: ET.Element) -> None:
