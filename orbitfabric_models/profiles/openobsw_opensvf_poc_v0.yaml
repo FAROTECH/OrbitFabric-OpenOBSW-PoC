@@ -1,0 +1,88 @@
+# Candidate Projection Profile extracted from orbitfabric_models/poc_slice.yaml.
+#
+# This file contains authored OpenOBSW/OpenSVF target intent only.
+# Core Mission Model semantics such as units, types, packet membership,
+# sampling/period, command arguments, event severity and fault conditions
+# are intentionally not duplicated here.
+
+kind: orbitfabric.projection_profile
+profile_version: 0.1-candidate
+
+profile:
+  id: poc-openobsw-opensvf
+  version: 0.1.0
+  description: Reference Profile candidate extracted from the Stage 6.19 PoC baseline.
+
+integration:
+  id: orbitfabric-openobsw-opensvf
+  schema_version: 0.1-candidate
+
+settings:
+  flight_contract:
+    c_symbol_prefix: OF_
+  opensvf:
+    domain_apids:
+      EPS: 0x100
+
+bindings:
+  - id: tm.obc_bus_voltage
+    intent: project
+    sources:
+      - domain: telemetry
+        id: eps.obc.bus_voltage_mv
+    config:
+      kind: telemetry_parameter
+      numeric_id: 0x4001
+      # srdb_name omitted intentionally: default is the Core ID.
+      # c_symbol omitted intentionally: derive deterministically from Core ID + prefix.
+
+  - id: hk.obc
+    intent: project
+    sources:
+      - domain: packets
+        id: obc_hk
+    config:
+      kind: housekeeping_packet
+      sid: 0x01
+      pus:
+        service: 3
+        subservice: 25
+      # Packet membership and 1 s period are Core-derived from packets/obc_hk.
+
+  - id: cmd.ping
+    intent: project
+    sources:
+      - domain: commands
+        id: obc.ping
+    config:
+      kind: command
+      numeric_id: 0x1701
+      srdb_name: dhs.obc.ping
+      pus:
+        service: 17
+        subservice: 1
+      verification:
+        expected_telemetry:
+          - role: acceptance
+            service: 1
+            subservice: 1
+          - role: execution_complete
+            service: 1
+            subservice: 7
+          - role: command_response
+            service: 17
+            subservice: 2
+
+  - id: event.voltage_out_of_bounds
+    intent: project
+    sources:
+      - domain: events
+        id: eps.voltage_out_of_bounds
+    config:
+      kind: event
+      numeric_id: 0x5001
+      srdb_name: eps.obc.voltage_out_of_bounds
+      pus:
+        service: 5
+        subservice: 3
+      # Severity and trigger semantics remain Core-owned.
