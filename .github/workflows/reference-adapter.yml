@@ -113,6 +113,7 @@ jobs:
       - name: Verify Integration Result contract continuity
         run: |
           python - <<'PY'
+          from collections import Counter
           import hashlib
           import json
           from pathlib import Path
@@ -136,13 +137,36 @@ jobs:
           assert result['inputs']['core_input_set']['status'] == 'available'
           assert result['inputs']['profile']['status'] == 'available'
           assert result['mission']['status'] == 'available'
-          assert result['coverage']['status'] == 'complete'
-          assert result['coverage']['scope']['domains'] == [
+
+          coverage = result['coverage']
+          assert coverage['status'] == 'complete'
+          assert coverage['scope']['domains'] == [
               'commands', 'events', 'packets', 'telemetry'
           ]
-          assert len(result['coverage']['records']) == 4
-          assert all(r['state'] == 'projected' for r in result['coverage']['records'])
+          records_by_source = {
+              (record['source']['domain'], record['source']['id']): record
+              for record in coverage['records']
+          }
+          mapped_sources = {
+              (source['domain'], source['id'])
+              for mapping in result['mappings']
+              for source in mapping['sources']
+          }
           assert len(result['mappings']) == 4
+          assert mapped_sources <= set(records_by_source)
+          assert all(records_by_source[source]['state'] == 'projected' for source in mapped_sources)
+          assert all(
+              record['state'] in {
+                  'projected', 'partially_projected', 'intentionally_not_projected',
+                  'not_projected', 'unsupported', 'blocked', 'not_applicable'
+              }
+              for record in coverage['records']
+          )
+          derived_summary = Counter(record['state'] for record in coverage['records'])
+          assert coverage['summary'] == {
+              state: derived_summary[state] for state in sorted(derived_summary)
+          }
+
           assert result['diagnostics'] == []
           assert result['evidence'] == []
           assert result['external_tools'] == []
@@ -203,6 +227,7 @@ jobs:
           from pathlib import Path
           result = json.loads(Path('.handshake/failed_result/integration_result.json').read_text())
           assert result['result'] == 'failed'
+          assert result['capabilities'] == ['profile_validation']
           assert result['diagnostics']
           assert result['coverage']['status'] == 'unavailable'
           assert all(a['status'] == 'not_generated' for a in result['artifacts'])
