@@ -19,6 +19,13 @@ def _input_set(tmp_path: Path) -> Path:
     return _make_input_set(root)
 
 
+def _target_triples(targets: list[dict]) -> set[tuple[str, str, str]]:
+    return {
+        (target["namespace"], target["kind"], target["id"])
+        for target in targets
+    }
+
+
 def test_static_package_manifest_matches_packaged_schema() -> None:
     with as_file(_resource("integration_package.json")) as manifest_path:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -35,16 +42,13 @@ def test_static_package_manifest_matches_packaged_schema() -> None:
         "traceability",
     ]
     assert manifest["operations"] == [
-        {
-            "id": "project",
-            "capabilities": manifest["capabilities"],
-        }
+        {"id": "project", "capabilities": manifest["capabilities"]}
     ]
 
     schema_record = manifest["profile_schemas"][0]
     with as_file(_resource(schema_record["path"])) as schema_path:
         actual = sha256(schema_path.read_bytes()).hexdigest()
-    assert schema_record["sha256"] == actual, f"actual packaged schema SHA-256: {actual}"
+    assert schema_record["sha256"] == actual
 
 
 def test_project_run_writes_coherent_result_last_bundle(tmp_path: Path) -> None:
@@ -90,7 +94,7 @@ def test_project_run_writes_coherent_result_last_bundle(tmp_path: Path) -> None:
 
     mappings = {item["id"]: item for item in result["mappings"]}
     telemetry = mappings["mapping.tm.voltage"]
-    assert {tuple(target.values()) for target in telemetry["targets"]} == {
+    assert _target_triples(telemetry["targets"]) == {
         ("openobsw", "contract_symbol", "OF_TM_OBC_BUS_VOLTAGE_MV"),
         ("opensvf", "srdb_parameter", "eps.obc.bus_voltage_mv"),
     }
@@ -100,6 +104,7 @@ def test_project_run_writes_coherent_result_last_bundle(tmp_path: Path) -> None:
     assert coverage["scope"]["domains"] == ["commands", "events", "packets", "telemetry"]
     assert len(coverage["records"]) == 4
     assert all(record["state"] == "projected" for record in coverage["records"])
+    assert coverage["summary"] == {"projected": 4}
     assert result["diagnostics"] == []
     assert result["evidence"] == []
     assert result["external_tools"] == []
@@ -123,6 +128,7 @@ def test_project_validation_failure_writes_failed_result(tmp_path: Path) -> None
     assert result_path is not None and result_path.is_file()
     result = json.loads(result_path.read_text(encoding="utf-8"))
     assert result["result"] == "failed"
+    assert result["capabilities"] == ["profile_validation"]
     assert result["inputs"]["core_input_set"]["status"] == "available"
     assert result["inputs"]["profile"]["status"] == "available"
     assert result["mission"]["status"] == "available"
@@ -151,8 +157,30 @@ def test_unsupported_operation_is_machine_readable_failure(tmp_path: Path) -> No
     assert result_path is not None
     result = json.loads(result_path.read_text(encoding="utf-8"))
     assert result["result"] == "failed"
+    assert result["capabilities"] == []
     assert result["operation"] == {"id": "something-else"}
     assert result["diagnostics"][0]["code"] == "operation.unsupported"
+
+
+def test_profile_read_failure_does_not_erase_available_core_provenance(tmp_path: Path) -> None:
+    manifest_path = _input_set(tmp_path)
+    missing_profile = tmp_path / "missing-profile.yaml"
+    output_dir = tmp_path / "failed"
+
+    status, result_path = run_operation(
+        operation_id="project",
+        manifest_path=manifest_path,
+        profile_path=missing_profile,
+        output_dir=output_dir,
+        schema_path=SCHEMA,
+    )
+    assert status != 0
+    assert result_path is not None
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    assert result["inputs"]["core_input_set"]["status"] == "available"
+    assert result["mission"]["status"] == "available"
+    assert result["inputs"]["profile"]["status"] == "unavailable"
+    assert result["integration"]["schema_version"] is None
 
 
 def test_existing_result_marker_is_removed_before_new_attempt(tmp_path: Path) -> None:
