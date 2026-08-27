@@ -5,14 +5,18 @@ from importlib.resources import as_file, files
 import json
 from pathlib import Path
 
-import yaml
-
 from orbitfabric_openobsw_opensvf.runner import run_operation
 from test_resolved_projection import SCHEMA, _make_input_set, _profile, _write_profile
 
 
 def _resource(name: str):
     return files("orbitfabric_openobsw_opensvf").joinpath(name)
+
+
+def _input_set(tmp_path: Path) -> Path:
+    root = tmp_path / "input"
+    root.mkdir(parents=True)
+    return _make_input_set(root)
 
 
 def test_static_package_manifest_matches_packaged_schema() -> None:
@@ -44,7 +48,7 @@ def test_static_package_manifest_matches_packaged_schema() -> None:
 
 
 def test_project_run_writes_coherent_result_last_bundle(tmp_path: Path) -> None:
-    manifest_path = _make_input_set(tmp_path / "input")
+    manifest_path = _input_set(tmp_path)
     profile_path = _write_profile(tmp_path, _profile())
     output_dir = tmp_path / "result"
 
@@ -102,7 +106,7 @@ def test_project_run_writes_coherent_result_last_bundle(tmp_path: Path) -> None:
 
 
 def test_project_validation_failure_writes_failed_result(tmp_path: Path) -> None:
-    manifest_path = _make_input_set(tmp_path / "input")
+    manifest_path = _input_set(tmp_path)
     profile = _profile()
     profile["bindings"][0]["sources"][0]["id"] = "eps.missing"
     profile_path = _write_profile(tmp_path, profile)
@@ -132,7 +136,7 @@ def test_project_validation_failure_writes_failed_result(tmp_path: Path) -> None
 
 
 def test_unsupported_operation_is_machine_readable_failure(tmp_path: Path) -> None:
-    manifest_path = _make_input_set(tmp_path / "input")
+    manifest_path = _input_set(tmp_path)
     profile_path = _write_profile(tmp_path, _profile())
     output_dir = tmp_path / "unsupported"
 
@@ -144,6 +148,7 @@ def test_unsupported_operation_is_machine_readable_failure(tmp_path: Path) -> No
         schema_path=SCHEMA,
     )
     assert status != 0
+    assert result_path is not None
     result = json.loads(result_path.read_text(encoding="utf-8"))
     assert result["result"] == "failed"
     assert result["operation"] == {"id": "something-else"}
@@ -151,7 +156,7 @@ def test_unsupported_operation_is_machine_readable_failure(tmp_path: Path) -> No
 
 
 def test_existing_result_marker_is_removed_before_new_attempt(tmp_path: Path) -> None:
-    manifest_path = _make_input_set(tmp_path / "input")
+    manifest_path = _input_set(tmp_path)
     profile = _profile()
     profile["bindings"][0]["sources"][0]["id"] = "eps.missing"
     profile_path = _write_profile(tmp_path, profile)
@@ -170,6 +175,7 @@ def test_existing_result_marker_is_removed_before_new_attempt(tmp_path: Path) ->
         schema_path=SCHEMA,
     )
     assert status != 0
+    assert result_path is not None
     result = json.loads(result_path.read_text(encoding="utf-8"))
     assert result["result"] == "failed"
     assert not old_artifact.exists()
