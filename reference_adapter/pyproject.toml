@@ -27,7 +27,7 @@ orbitfabric-openobsw-opensvf = "orbitfabric_openobsw_opensvf.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-orbitfabric_openobsw_opensvf = ["schemas/*.json"]
+orbitfabric_openobsw_opensvf = ["integration_package.json", "schemas/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
