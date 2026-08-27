@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbitfabric-openobsw-opensvf"
+version = "0.1.0.dev0"
+description = "Reference OrbitFabric integration adapter for OpenOBSW/OpenSVF"
+requires-python = ">=3.10"
+dependencies = [
+    "jsonschema>=4.18",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+]
+
+[project.scripts]
+orbitfabric-openobsw-opensvf = "orbitfabric_openobsw_opensvf.cli:main"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+orbitfabric_openobsw_opensvf = ["schemas/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
