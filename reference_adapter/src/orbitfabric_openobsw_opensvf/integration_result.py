@@ -29,36 +29,18 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def available_provenance(
-    *, manifest_path: Path, profile_path: Path
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+def core_provenance(
+    manifest_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     manifest = _read_json(manifest_path)
-    profile = _read_yaml(profile_path)
-
     mission = manifest.get("mission")
     if not isinstance(mission, dict):
         raise ValidationInputError("Integration Input Set has no mission identity")
-    profile_identity = profile.get("profile")
-    if not isinstance(profile_identity, dict):
-        raise ValidationInputError("Projection Profile has no profile identity")
-    integration = profile.get("integration")
-    if not isinstance(integration, dict):
-        raise ValidationInputError("Projection Profile has no integration identity")
-
     core = {
         "status": "available",
         "kind": manifest.get("kind"),
         "version": manifest.get("input_set_version"),
         "sha256": manifest.get("input_set_sha256"),
-        "reason": None,
-    }
-    profile_provenance = {
-        "status": "available",
-        "kind": profile.get("kind"),
-        "profile_version": profile.get("profile_version"),
-        "id": profile_identity.get("id"),
-        "version": profile_identity.get("version"),
-        "sha256": file_sha256(profile_path),
         "reason": None,
     }
     mission_provenance = {
@@ -67,7 +49,40 @@ def available_provenance(
         "model_version": mission.get("model_version"),
         "reason": None,
     }
-    return manifest, profile, core, profile_provenance, mission_provenance
+    return manifest, core, mission_provenance
+
+
+def profile_provenance(
+    profile_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], str | None]:
+    profile = _read_yaml(profile_path)
+    identity = profile.get("profile")
+    if not isinstance(identity, dict):
+        raise ValidationInputError("Projection Profile has no profile identity")
+    integration = profile.get("integration")
+    schema_version = (
+        integration.get("schema_version")
+        if isinstance(integration, dict) and isinstance(integration.get("schema_version"), str)
+        else None
+    )
+    provenance = {
+        "status": "available",
+        "kind": profile.get("kind"),
+        "profile_version": profile.get("profile_version"),
+        "id": identity.get("id"),
+        "version": identity.get("version"),
+        "sha256": file_sha256(profile_path),
+        "reason": None,
+    }
+    return profile, provenance, schema_version
+
+
+def available_provenance(
+    *, manifest_path: Path, profile_path: Path
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    manifest, core, mission = core_provenance(manifest_path)
+    profile, profile_value, _ = profile_provenance(profile_path)
+    return manifest, profile, core, profile_value, mission
 
 
 def unavailable_core(reason: str) -> dict[str, Any]:
@@ -193,11 +208,8 @@ def build_resolutions(resolved: dict[str, Any]) -> list[dict[str, Any]]:
                 if isinstance(first, str):
                     anchor_binding = first
 
-            # Global Profile settings such as domain APID are intentionally omitted
-            # from v0 resolutions because B.3 requires profile-origin records to be
-            # anchored to a concrete Profile binding. The exact value remains in the
-            # target artifact/IR and can be exposed later if the generic contract grows
-            # a Profile-setting anchor.
+            # A global Profile setting has no binding anchor in the generic B.3 v0
+            # resolution shape. Do not mislabel it as binding-owned merely to expose it.
             if origin == "profile" and prop == "target.opensvf.pus.apid":
                 continue
 
@@ -323,7 +335,7 @@ def build_success_result(
     *, adapter_version: str, operation_id: str, manifest_path: Path,
     profile_path: Path, resolved: dict[str, Any], artifacts: list[dict[str, Any]]
 ) -> dict[str, Any]:
-    manifest, profile, core, profile_provenance, mission = available_provenance(
+    manifest, profile, core, profile_value, mission = available_provenance(
         manifest_path=manifest_path, profile_path=profile_path
     )
     mappings = build_mappings(resolved)
@@ -342,7 +354,7 @@ def build_success_result(
         "adapter": {"id": ADAPTER_ID, "version": adapter_version},
         "operation": {"id": operation_id},
         "mission": mission,
-        "inputs": {"core_input_set": core, "profile": profile_provenance},
+        "inputs": {"core_input_set": core, "profile": profile_value},
         "capabilities": PROJECT_CAPABILITIES,
         "artifacts": artifacts,
         "mappings": mappings,
@@ -357,8 +369,8 @@ def build_success_result(
 def failed_result(
     *, adapter_version: str, operation_id: str, schema_version: str | None,
     core: dict[str, Any], profile: dict[str, Any], mission: dict[str, Any],
-    diagnostics: list[dict[str, Any]], artifacts: list[dict[str, Any]],
-    coverage_reason: str
+    capabilities: list[str], diagnostics: list[dict[str, Any]],
+    artifacts: list[dict[str, Any]], coverage_reason: str
 ) -> dict[str, Any]:
     return {
         "kind": RESULT_KIND,
@@ -369,7 +381,7 @@ def failed_result(
         "operation": {"id": operation_id},
         "mission": mission,
         "inputs": {"core_input_set": core, "profile": profile},
-        "capabilities": ["profile_validation"],
+        "capabilities": capabilities,
         "artifacts": artifacts,
         "mappings": [],
         "resolutions": [],
