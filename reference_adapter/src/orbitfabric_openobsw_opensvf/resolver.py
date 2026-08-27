@@ -32,15 +32,12 @@ class ProjectionResolutionError(RuntimeError):
 
 
 def resolve_projection(
-    *,
-    manifest_path: Path,
-    profile_path: Path,
-    schema_path: Path,
+    *, manifest_path: Path, profile_path: Path, schema_path: Path
 ) -> dict[str, Any]:
-    """Resolve validated Core semantics and Profile target intent into adapter IR.
+    """Resolve Core-owned semantics plus Profile intent into adapter-owned IR.
 
-    The resolver consumes only the coherent Core Integration Input Set and the
-    version-controlled Projection Profile. It never reads Mission Model YAML.
+    Only the coherent Core Integration Input Set and Projection Profile are read.
+    Mission Model YAML is intentionally outside this boundary.
     """
     validation = validate_profile(
         manifest_path=manifest_path,
@@ -59,27 +56,26 @@ def resolve_projection(
 
     core_entities = _index_snapshot_entities(model)
     settings, setting_resolutions = _resolve_settings(profile)
-
     projections: list[dict[str, Any]] = []
     exclusions: list[dict[str, Any]] = []
+
     bindings = profile.get("bindings", [])
     if not isinstance(bindings, list):
         raise ValidationInputError("Projection Profile bindings must be an array")
-
     for binding in bindings:
         if not isinstance(binding, dict):
             continue
         if binding.get("intent") == "do_not_project":
             exclusions.append(_resolve_exclusion(binding))
-            continue
-        projections.append(
-            _resolve_binding(
-                binding=binding,
-                core_entities=core_entities,
-                model=model,
-                settings=settings,
+        else:
+            projections.append(
+                _resolve_binding(
+                    binding=binding,
+                    core_entities=core_entities,
+                    model=model,
+                    settings=settings,
+                )
             )
-        )
 
     projections.sort(key=lambda item: item["binding_id"])
     exclusions.sort(key=lambda item: item["binding_id"])
@@ -138,13 +134,11 @@ def write_resolved_projection(
 
 
 def _load_mission_snapshot(
-    manifest_path: Path,
-    manifest: dict[str, Any],
+    manifest_path: Path, manifest: dict[str, Any]
 ) -> dict[str, Any]:
     surfaces = manifest.get("surfaces")
     if not isinstance(surfaces, list):
         raise ValidationInputError("Integration Input Set surfaces must be an array")
-
     record = next(
         (
             item
@@ -169,7 +163,9 @@ def _load_mission_snapshot(
     return snapshot
 
 
-def _index_snapshot_entities(model: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
+def _index_snapshot_entities(
+    model: dict[str, Any],
+) -> dict[tuple[str, str], dict[str, Any]]:
     index: dict[tuple[str, str], dict[str, Any]] = {}
     for domain in ("telemetry", "packets", "commands", "events"):
         values = model.get(domain)
@@ -187,34 +183,34 @@ def _index_snapshot_entities(model: dict[str, Any]) -> dict[tuple[str, str], dic
     return index
 
 
-def _resolve_settings(profile: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _resolve_settings(
+    profile: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     authored = profile.get("settings")
-    authored_settings = authored if isinstance(authored, dict) else {}
-    flight_contract = authored_settings.get("flight_contract")
-    flight_contract = flight_contract if isinstance(flight_contract, dict) else {}
-    opensvf = authored_settings.get("opensvf")
+    authored = authored if isinstance(authored, dict) else {}
+    flight = authored.get("flight_contract")
+    flight = flight if isinstance(flight, dict) else {}
+    opensvf = authored.get("opensvf")
     opensvf = opensvf if isinstance(opensvf, dict) else {}
 
-    if "c_symbol_prefix" in flight_contract:
-        c_symbol_prefix = flight_contract["c_symbol_prefix"]
+    if "c_symbol_prefix" in flight:
+        prefix = flight["c_symbol_prefix"]
         prefix_origin = "profile"
     else:
-        c_symbol_prefix = DEFAULT_C_SYMBOL_PREFIX
+        prefix = DEFAULT_C_SYMBOL_PREFIX
         prefix_origin = "adapter_default"
 
     domain_apids = opensvf.get("domain_apids", {})
-    if not isinstance(domain_apids, dict):
-        domain_apids = {}
-
+    domain_apids = domain_apids if isinstance(domain_apids, dict) else {}
     settings = {
-        "flight_contract": {"c_symbol_prefix": c_symbol_prefix},
+        "flight_contract": {"c_symbol_prefix": prefix},
         "opensvf": {"domain_apids": dict(sorted(domain_apids.items()))},
     }
     resolutions = [
         {
             "property": "settings.flight_contract.c_symbol_prefix",
             "origin": prefix_origin,
-            "value": c_symbol_prefix,
+            "value": prefix,
         }
     ]
     for domain, apid in sorted(domain_apids.items()):
@@ -235,26 +231,26 @@ def _resolve_binding(
     model: dict[str, Any],
     settings: dict[str, Any],
 ) -> dict[str, Any]:
-    binding_id = binding["id"]
-    sources = binding["sources"]
-    source = sources[0]
-    source_ref = (source["domain"], source["id"])
-    semantic = core_entities.get(source_ref)
+    source = binding["sources"][0]
+    ref = (source["domain"], source["id"])
+    semantic = core_entities.get(ref)
     if semantic is None:
         raise ValidationInputError(
-            f"validated source disappeared from Mission Snapshot: {source_ref[0]}/{source_ref[1]}"
+            f"validated source disappeared from Mission Snapshot: {ref[0]}/{ref[1]}"
         )
 
     config = binding["config"]
-    kind = config["kind"]
     target, resolutions = _resolve_target(
         source=source,
         config=config,
         c_symbol_prefix=settings["flight_contract"]["c_symbol_prefix"],
     )
+    core_semantics: dict[str, Any] = {
+        "origin": "core",
+        "source": semantic,
+    }
 
-    core_semantics: dict[str, Any] = {"source": semantic}
-    if kind == "housekeeping_packet":
+    if config["kind"] == "housekeeping_packet":
         member_ids = semantic.get("telemetry", [])
         if not isinstance(member_ids, list):
             raise ValidationInputError(
@@ -276,8 +272,8 @@ def _resolve_binding(
         core_semantics["telemetry_members"] = members
 
     return {
-        "binding_id": binding_id,
-        "kind": kind,
+        "binding_id": binding["id"],
+        "kind": config["kind"],
         "sources": [{"domain": source["domain"], "id": source["id"]}],
         "core_semantics": core_semantics,
         "target": target,
@@ -286,47 +282,41 @@ def _resolve_binding(
 
 
 def _resolve_target(
-    *,
-    source: dict[str, Any],
-    config: dict[str, Any],
-    c_symbol_prefix: str,
+    *, source: dict[str, Any], config: dict[str, Any], c_symbol_prefix: str
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     target: dict[str, Any] = {"kind": config["kind"]}
-    resolutions: list[dict[str, Any]] = []
+    resolutions: list[dict[str, Any]] = [
+        {
+            "property": "target.kind",
+            "origin": "profile",
+            "value": config["kind"],
+        }
+    ]
 
-    for property_name in ("numeric_id", "sid", "pus", "verification"):
-        if property_name in config:
-            target[property_name] = config[property_name]
+    for name in ("numeric_id", "sid", "pus", "verification"):
+        if name in config:
+            target[name] = config[name]
             resolutions.append(
-                {
-                    "property": f"target.{property_name}",
-                    "origin": "profile",
-                    "value": config[property_name],
-                }
+                {"property": f"target.{name}", "origin": "profile", "value": config[name]}
             )
 
-    if "srdb_name" in config:
-        srdb_name = config["srdb_name"]
-        srdb_origin = "profile"
-    else:
-        srdb_name = source["id"]
-        srdb_origin = "adapter_default"
     if config["kind"] != "housekeeping_packet":
+        srdb_name = config.get("srdb_name", source["id"])
         target["srdb_name"] = srdb_name
         resolutions.append(
             {
                 "property": "target.srdb_name",
-                "origin": srdb_origin,
+                "origin": "profile" if "srdb_name" in config else "adapter_default",
                 "value": srdb_name,
             }
         )
 
-    if "c_symbol" in config:
-        c_symbol = config["c_symbol"]
-        c_symbol_origin = "profile"
-    else:
+    c_symbol = config.get("c_symbol")
+    if c_symbol is None:
         c_symbol = _derive_c_symbol(c_symbol_prefix, source["id"])
         c_symbol_origin = "adapter_default"
+    else:
+        c_symbol_origin = "profile"
     target["c_symbol"] = c_symbol
     resolutions.append(
         {
@@ -335,7 +325,6 @@ def _resolve_target(
             "value": c_symbol,
         }
     )
-
     return target, sorted(resolutions, key=lambda item: item["property"])
 
 
