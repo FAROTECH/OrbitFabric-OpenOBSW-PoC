@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 from .resolver import RESOLVED_PROJECTION_KIND, RESOLVED_PROJECTION_VERSION
-from .validator import ValidationInputError
 
 
 class FlightContractError(RuntimeError):
@@ -73,10 +72,22 @@ def render_flight_contract(resolved: dict[str, Any]) -> str:
         "",
     ]
 
-    _render_enum(lines, "OF_TM_INVALID", "of_tm_id_t", by_kind["telemetry_parameter"], "numeric_id")
+    _render_enum(
+        lines,
+        "OF_TM_INVALID",
+        "of_tm_id_t",
+        by_kind["telemetry_parameter"],
+        "numeric_id",
+    )
     _render_enum(lines, "OF_CMD_INVALID", "of_cmd_id_t", by_kind["command"], "numeric_id")
     _render_enum(lines, "OF_EVENT_INVALID", "of_event_id_t", by_kind["event"], "numeric_id")
-    _render_enum(lines, "OF_HK_SET_INVALID", "of_hk_set_id_t", by_kind["housekeeping_packet"], "sid")
+    _render_enum(
+        lines,
+        "OF_HK_SET_INVALID",
+        "of_hk_set_id_t",
+        by_kind["housekeeping_packet"],
+        "sid",
+    )
 
     for projection in by_kind["housekeeping_packet"]:
         target = _mapping(projection, "target")
