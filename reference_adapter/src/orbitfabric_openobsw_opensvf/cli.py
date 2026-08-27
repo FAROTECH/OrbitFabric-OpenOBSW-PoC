@@ -9,6 +9,7 @@ from .flight_contract import FlightContractError, materialize_flight_contract
 from .opensvf_srdb import OpenSvfSrdbError, materialize_opensvf_srdb
 from .projection_pipeline import write_resolved_projection
 from .resolver import ProjectionResolutionError
+from .runner import run_operation
 from .validator import ValidationInputError, validate_profile
 
 
@@ -45,6 +46,19 @@ def _add_resolved_input(parser: argparse.ArgumentParser) -> None:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="orbitfabric-openobsw-opensvf")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    run = subparsers.add_parser(
+        "run",
+        help="Execute an advertised integration operation using orbitfabric.adapter_cli.v0",
+    )
+    run.add_argument("--operation", required=True, help="Advertised integration operation ID")
+    _add_common_projection_inputs(run)
+    run.add_argument(
+        "--output-dir",
+        required=True,
+        type=Path,
+        help="Root directory for the Integration Result bundle",
+    )
 
     validate = subparsers.add_parser(
         "validate-profile",
@@ -87,6 +101,23 @@ def _schema_resource():
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+
+    if args.command == "run":
+        with as_file(_schema_resource()) as schema_path:
+            status, result_path = run_operation(
+                operation_id=args.operation,
+                manifest_path=args.input_set_manifest,
+                profile_path=args.profile,
+                output_dir=args.output_dir,
+                schema_path=schema_path,
+            )
+        if result_path is not None:
+            print(f"Integration Result: {result_path}")
+        if status == 0:
+            print("Integration operation: PASS")
+        else:
+            print("Integration operation: FAIL", file=sys.stderr)
+        return status
 
     if args.command == "validate-profile":
         try:

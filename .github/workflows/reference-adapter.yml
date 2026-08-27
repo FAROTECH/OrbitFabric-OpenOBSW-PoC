@@ -8,6 +8,7 @@ on:
       - feature/reference-adapter-resolved-projection
       - feature/reference-adapter-flight-contract
       - feature/reference-adapter-opensvf-srdb
+      - feature/reference-adapter-package-run-result
       - architecture/reference-adapter-extraction-plan
   pull_request:
     paths:
@@ -95,28 +96,90 @@ jobs:
           assert telemetry['target']['srdb_name'] == 'eps.obc.bus_voltage_mv'
           assert telemetry['target']['c_symbol'] == 'OF_TM_OBC_BUS_VOLTAGE_MV'
           assert telemetry['target']['c_type'] == 'uint16_t'
-          assert telemetry['target']['opensvf'] == {
-              'classification': 'TM',
-              'domain': 'EPS',
-              'dtype': 'int',
-              'model_id': 'eps',
-              'pus': {
-                  'apid': 0x100,
-                  'parameter_id': 0x4001,
-                  'service': 3,
-                  'subservice': 25,
-              },
-              'valid_range': [0.0, 65535.0],
+          assert telemetry['target']['opensvf']['pus'] == {
+              'apid': 0x100,
+              'parameter_id': 0x4001,
+              'service': 3,
+              'subservice': 25,
           }
           PY
-      - name: Materialize C flight contract
+      - name: Run adapter_cli v0 project operation
         run: |
-          orbitfabric-openobsw-opensvf generate-flight-contract \
-            --resolved-projection .handshake/resolved_projection.json \
-            --output .handshake/flight/mission_contract.h
-      - name: Compile generated contract as C11
+          orbitfabric-openobsw-opensvf run \
+            --operation project \
+            --input-set-manifest .handshake/integration_input/integration_input_manifest.json \
+            --profile orbitfabric_models/profiles/openobsw_opensvf_poc_v0.yaml \
+            --output-dir .handshake/result
+      - name: Verify Integration Result contract continuity
         run: |
-          cat > .handshake/flight/contract_smoke.c <<'C'
+          python - <<'PY'
+          from collections import Counter
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path('.handshake/result')
+          result = json.loads((root / 'integration_result.json').read_text())
+          assert result['kind'] == 'orbitfabric.integration_result'
+          assert result['result_version'] == '0.1-candidate'
+          assert result['result'] == 'succeeded'
+          assert result['integration'] == {
+              'id': 'orbitfabric-openobsw-opensvf',
+              'schema_version': '0.1-candidate',
+          }
+          assert result['operation'] == {'id': 'project'}
+          assert result['capabilities'] == [
+              'profile_validation',
+              'projection',
+              'artifact_generation',
+              'traceability',
+          ]
+          assert result['inputs']['core_input_set']['status'] == 'available'
+          assert result['inputs']['profile']['status'] == 'available'
+          assert result['mission']['status'] == 'available'
+
+          coverage = result['coverage']
+          assert coverage['status'] == 'complete'
+          assert coverage['scope']['domains'] == [
+              'commands', 'events', 'packets', 'telemetry'
+          ]
+          records_by_source = {
+              (record['source']['domain'], record['source']['id']): record
+              for record in coverage['records']
+          }
+          mapped_sources = {
+              (source['domain'], source['id'])
+              for mapping in result['mappings']
+              for source in mapping['sources']
+          }
+          assert len(result['mappings']) == 4
+          assert mapped_sources <= set(records_by_source)
+          assert all(records_by_source[source]['state'] == 'projected' for source in mapped_sources)
+          assert all(
+              record['state'] in {
+                  'projected', 'partially_projected', 'intentionally_not_projected',
+                  'not_projected', 'unsupported', 'blocked', 'not_applicable'
+              }
+              for record in coverage['records']
+          )
+          derived_summary = Counter(record['state'] for record in coverage['records'])
+          assert coverage['summary'] == {
+              state: derived_summary[state] for state in sorted(derived_summary)
+          }
+
+          assert result['diagnostics'] == []
+          assert result['evidence'] == []
+          assert result['external_tools'] == []
+          for artifact in result['artifacts']:
+              assert artifact['status'] == 'generated'
+              path = root / artifact['path']
+              assert path.is_file()
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact['sha256']
+          PY
+      - name: Compile Result-declared flight contract as C11
+        run: |
+          mkdir -p .handshake/result/smoke
+          cat > .handshake/result/smoke/contract_smoke.c <<'C'
           #include "mission_contract.h"
 
           int main(void) {
@@ -131,18 +194,41 @@ jobs:
           }
           C
           cc -std=c11 -Wall -Wextra -Werror \
-            -I .handshake/flight \
-            .handshake/flight/contract_smoke.c \
-            -o .handshake/flight/contract_smoke
-          .handshake/flight/contract_smoke
-      - name: Materialize OpenSVF SRDB
-        run: |
-          orbitfabric-openobsw-opensvf generate-opensvf-srdb \
-            --resolved-projection .handshake/resolved_projection.json \
-            --output .handshake/ground/poc_srdb.yaml
-      - name: Validate SRDB through real OpenSVF and XTCE generation
+            -I .handshake/result/artifacts/flight \
+            .handshake/result/smoke/contract_smoke.c \
+            -o .handshake/result/smoke/contract_smoke
+          .handshake/result/smoke/contract_smoke
+      - name: Validate Result-declared SRDB through real OpenSVF and XTCE generation
         run: |
           python tools/validate_opensvf_srdb_xtce.py \
             --opensvf-repo .deps/opensvf \
-            --srdb .handshake/ground/poc_srdb.yaml \
-            --output .handshake/ground/opensvf.xml
+            --srdb .handshake/result/artifacts/ground/poc_srdb.yaml \
+            --output .handshake/result/smoke/opensvf.xml
+      - name: Prove failed run remains machine-readable
+        run: |
+          cp orbitfabric_models/profiles/openobsw_opensvf_poc_v0.yaml .handshake/invalid_profile.yaml
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.handshake/invalid_profile.yaml')
+          text = path.read_text()
+          path.write_text(text.replace('eps.obc.bus_voltage_mv', 'eps.missing', 1))
+          PY
+          set +e
+          orbitfabric-openobsw-opensvf run \
+            --operation project \
+            --input-set-manifest .handshake/integration_input/integration_input_manifest.json \
+            --profile .handshake/invalid_profile.yaml \
+            --output-dir .handshake/failed_result
+          status=$?
+          set -e
+          test "$status" -ne 0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('.handshake/failed_result/integration_result.json').read_text())
+          assert result['result'] == 'failed'
+          assert result['capabilities'] == ['profile_validation']
+          assert result['diagnostics']
+          assert result['coverage']['status'] == 'unavailable'
+          assert all(a['status'] == 'not_generated' for a in result['artifacts'])
+          PY
