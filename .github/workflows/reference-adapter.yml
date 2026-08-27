@@ -6,6 +6,7 @@ on:
       - feature/reference-adapter-validate-profile
       - feature/reference-adapter-core-handshake
       - feature/reference-adapter-resolved-projection
+      - feature/reference-adapter-flight-contract
       - architecture/reference-adapter-extraction-plan
   pull_request:
     paths:
@@ -85,8 +86,36 @@ jobs:
           )
           assert telemetry['core_semantics']['source']['unit'] == 'mV'
           assert telemetry['target']['srdb_name'] == 'eps.obc.bus_voltage_mv'
+          assert telemetry['target']['c_symbol'] == 'OF_TM_OBC_BUS_VOLTAGE_MV'
+          assert telemetry['target']['c_type'] == 'uint16_t'
           assert next(
               item for item in telemetry['resolutions']
-              if item['property'] == 'target.srdb_name'
+              if item['property'] == 'target.c_symbol'
           )['origin'] == 'adapter_default'
           PY
+      - name: Materialize C flight contract
+        run: |
+          orbitfabric-openobsw-opensvf generate-flight-contract \
+            --resolved-projection .handshake/resolved_projection.json \
+            --output .handshake/flight/mission_contract.h
+      - name: Compile generated contract as C11
+        run: |
+          cat > .handshake/flight/contract_smoke.c <<'C'
+          #include "mission_contract.h"
+
+          int main(void) {
+              of_hk_obc_t hk = {0};
+              hk.obc_bus_voltage_mv = 5000u;
+              return (OF_TM_OBC_BUS_VOLTAGE_MV == 0x4001 &&
+                      OF_CMD_PING == 0x1701 &&
+                      OF_EVENT_VOLTAGE_OUT_OF_BOUNDS == 0x5001 &&
+                      OF_HK_SET_OBC == 0x0001 &&
+                      OF_HK_SET_OBC_COLLECTION_INTERVAL_S == 1u &&
+                      hk.obc_bus_voltage_mv == 5000u) ? 0 : 1;
+          }
+          C
+          cc -std=c11 -Wall -Wextra -Werror \
+            -I .handshake/flight \
+            .handshake/flight/contract_smoke.c \
+            -o .handshake/flight/contract_smoke
+          .handshake/flight/contract_smoke
