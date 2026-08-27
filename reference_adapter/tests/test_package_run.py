@@ -26,6 +26,34 @@ def _target_triples(targets: list[dict]) -> set[tuple[str, str, str]]:
     }
 
 
+def _assert_referential_integrity(result: dict, profile: dict) -> None:
+    mapping_ids = {item["id"] for item in result["mappings"]}
+    diagnostic_ids = {item["id"] for item in result["diagnostics"]}
+    binding_ids = {item["id"] for item in profile["bindings"]}
+
+    assert len(mapping_ids) == len(result["mappings"])
+    assert len(diagnostic_ids) == len(result["diagnostics"])
+
+    for mapping in result["mappings"]:
+        assert mapping["sources"]
+        assert mapping["targets"]
+        assert set(mapping["profile_bindings"]) <= binding_ids
+
+    for resolution in result["resolutions"]:
+        if resolution.get("mapping") is not None:
+            assert resolution["mapping"] in mapping_ids
+        if resolution.get("binding") is not None:
+            assert resolution["binding"] in binding_ids
+
+    for artifact in result["artifacts"]:
+        assert set(artifact["derived_from_mappings"]) <= mapping_ids
+
+    for record in result["coverage"]["records"]:
+        assert set(record["mappings"]) <= mapping_ids
+        assert set(record["profile_bindings"]) <= binding_ids
+        assert set(record["diagnostics"]) <= diagnostic_ids
+
+
 def test_static_package_manifest_matches_packaged_schema() -> None:
     with as_file(_resource("integration_package.json")) as manifest_path:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -53,7 +81,8 @@ def test_static_package_manifest_matches_packaged_schema() -> None:
 
 def test_project_run_writes_coherent_result_last_bundle(tmp_path: Path) -> None:
     manifest_path = _input_set(tmp_path)
-    profile_path = _write_profile(tmp_path, _profile())
+    profile = _profile()
+    profile_path = _write_profile(tmp_path, profile)
     output_dir = tmp_path / "result"
 
     status, result_path = run_operation(
@@ -108,6 +137,7 @@ def test_project_run_writes_coherent_result_last_bundle(tmp_path: Path) -> None:
     assert result["diagnostics"] == []
     assert result["evidence"] == []
     assert result["external_tools"] == []
+    _assert_referential_integrity(result, profile)
 
 
 def test_project_validation_failure_writes_failed_result(tmp_path: Path) -> None:
