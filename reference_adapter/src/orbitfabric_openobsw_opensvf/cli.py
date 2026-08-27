@@ -5,6 +5,7 @@ from importlib.resources import as_file, files
 from pathlib import Path
 import sys
 
+from .flight_contract import FlightContractError, materialize_flight_contract
 from .resolver import ProjectionResolutionError, write_resolved_projection
 from .validator import ValidationInputError, validate_profile
 
@@ -45,6 +46,23 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         dest="json_output",
         help="Write the resolved projection model to this JSON file",
+    )
+
+    flight = subparsers.add_parser(
+        "generate-flight-contract",
+        help="Materialize mission_contract.h from a resolved projection model",
+    )
+    flight.add_argument(
+        "--resolved-projection",
+        required=True,
+        type=Path,
+        help="Path to adapter-owned resolved_projection.json",
+    )
+    flight.add_argument(
+        "--output",
+        required=True,
+        type=Path,
+        help="Path where mission_contract.h will be written",
     )
     return parser
 
@@ -105,6 +123,19 @@ def main(argv: list[str] | None = None) -> int:
 
         print(f"Resolved projection written to: {written}")
         print("Projection resolution: PASS")
+        return 0
+
+    if args.command == "generate-flight-contract":
+        try:
+            written = materialize_flight_contract(
+                resolved_projection_file=args.resolved_projection,
+                output_file=args.output,
+            )
+        except FlightContractError as exc:
+            print(f"ERROR flight-contract: {exc}", file=sys.stderr)
+            return 2
+        print(f"Flight contract written to: {written}")
+        print("Flight contract materialization: PASS")
         return 0
 
     raise AssertionError(f"unhandled command: {args.command}")

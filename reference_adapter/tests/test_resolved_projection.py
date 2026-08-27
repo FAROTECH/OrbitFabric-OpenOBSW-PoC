@@ -248,6 +248,8 @@ def test_resolves_core_semantics_defaults_and_profile_values(tmp_path: Path) -> 
     assert payload["kind"] == "orbitfabric.openobsw_opensvf.resolved_projection"
     assert payload["resolved_projection_version"] == "0.1-candidate"
     assert payload["core_input_set"]["input_set_sha256"] == "a" * 64
+    assert payload["settings"]["flight_contract"]["contract_name"] == "test-profile"
+    assert payload["settings"]["flight_contract"]["contract_version"] == "0.1.0"
     assert [item["binding_id"] for item in payload["projections"]] == [
         "cmd.ping",
         "event.voltage",
@@ -260,10 +262,13 @@ def test_resolves_core_semantics_defaults_and_profile_values(tmp_path: Path) -> 
     assert telemetry["core_semantics"]["source"]["type"] == "uint16"
     assert telemetry["target"]["numeric_id"] == 0x4001
     assert telemetry["target"]["srdb_name"] == "eps.obc.bus_voltage_mv"
-    assert telemetry["target"]["c_symbol"] == "OF_EPS_OBC_BUS_VOLTAGE_MV"
+    assert telemetry["target"]["c_symbol"] == "OF_TM_OBC_BUS_VOLTAGE_MV"
+    assert telemetry["target"]["c_type"] == "uint16_t"
+    assert telemetry["target"]["field_name"] == "obc_bus_voltage_mv"
     assert _resolution(telemetry, "target.numeric_id")["origin"] == "profile"
     assert _resolution(telemetry, "target.srdb_name")["origin"] == "adapter_default"
     assert _resolution(telemetry, "target.c_symbol")["origin"] == "adapter_default"
+    assert _resolution(telemetry, "target.c_type")["origin"] == "adapter_default"
 
     housekeeping = _projection(payload, "hk.obc")
     assert housekeeping["core_semantics"]["source"]["period"] == "1 s"
@@ -273,9 +278,20 @@ def test_resolves_core_semantics_defaults_and_profile_values(tmp_path: Path) -> 
     assert housekeeping["core_semantics"]["telemetry_members"][0]["unit"] == "mV"
     assert housekeeping["target"]["sid"] == 1
     assert housekeeping["target"]["pus"] == {"service": 3, "subservice": 25}
+    assert housekeeping["target"]["c_symbol"] == "OF_HK_SET_OBC"
+    assert housekeeping["target"]["struct_type"] == "of_hk_obc_t"
+    assert housekeeping["target"]["collection_interval_s"] == 1
+    assert housekeeping["target"]["members"] == [
+        {
+            "core_id": "eps.obc.bus_voltage_mv",
+            "c_type": "uint16_t",
+            "field_name": "obc_bus_voltage_mv",
+        }
+    ]
 
     command = _projection(payload, "cmd.ping")
     assert command["core_semantics"]["source"]["requires_ack"] is True
+    assert command["target"]["c_symbol"] == "OF_CMD_PING"
     assert command["target"]["srdb_name"] == "dhs.obc.ping"
     assert _resolution(command, "target.srdb_name")["origin"] == "profile"
 
@@ -293,14 +309,12 @@ def test_binding_order_does_not_change_resolved_projection_order(tmp_path: Path)
         profile_path=_write_profile(tmp_path, profile),
         schema_path=SCHEMA,
     )
-
     profile["bindings"] = list(reversed(profile["bindings"]))
     second = resolve_projection(
         manifest_path=manifest_path,
         profile_path=_write_profile(tmp_path, profile),
         schema_path=SCHEMA,
     )
-
     assert first == second
 
 
@@ -349,7 +363,6 @@ def test_resolved_projection_json_is_deterministic(tmp_path: Path) -> None:
     profile_path = _write_profile(tmp_path, _profile())
     first = tmp_path / "first.json"
     second = tmp_path / "second.json"
-
     write_resolved_projection(
         manifest_path=manifest_path,
         profile_path=profile_path,

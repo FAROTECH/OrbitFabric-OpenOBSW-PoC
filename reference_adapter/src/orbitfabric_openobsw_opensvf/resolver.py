@@ -34,11 +34,7 @@ class ProjectionResolutionError(RuntimeError):
 def resolve_projection(
     *, manifest_path: Path, profile_path: Path, schema_path: Path
 ) -> dict[str, Any]:
-    """Resolve Core-owned semantics plus Profile intent into adapter-owned IR.
-
-    Only the coherent Core Integration Input Set and Projection Profile are read.
-    Mission Model YAML is intentionally outside this boundary.
-    """
+    """Resolve Core-owned semantics plus Profile intent into adapter-owned IR."""
     validation = validate_profile(
         manifest_path=manifest_path,
         profile_path=profile_path,
@@ -200,10 +196,16 @@ def _resolve_settings(
         prefix = DEFAULT_C_SYMBOL_PREFIX
         prefix_origin = "adapter_default"
 
+    profile_identity = profile["profile"]
+    flight_settings = {
+        "c_symbol_prefix": prefix,
+        "contract_name": profile_identity["id"],
+        "contract_version": profile_identity["version"],
+    }
     domain_apids = opensvf.get("domain_apids", {})
     domain_apids = domain_apids if isinstance(domain_apids, dict) else {}
     settings = {
-        "flight_contract": {"c_symbol_prefix": prefix},
+        "flight_contract": flight_settings,
         "opensvf": {"domain_apids": dict(sorted(domain_apids.items()))},
     }
     resolutions = [
@@ -211,7 +213,17 @@ def _resolve_settings(
             "property": "settings.flight_contract.c_symbol_prefix",
             "origin": prefix_origin,
             "value": prefix,
-        }
+        },
+        {
+            "property": "settings.flight_contract.contract_name",
+            "origin": "adapter_default",
+            "value": profile_identity["id"],
+        },
+        {
+            "property": "settings.flight_contract.contract_version",
+            "origin": "adapter_default",
+            "value": profile_identity["version"],
+        },
     ]
     for domain, apid in sorted(domain_apids.items()):
         resolutions.append(
@@ -221,7 +233,7 @@ def _resolve_settings(
                 "value": apid,
             }
         )
-    return settings, resolutions
+    return settings, sorted(resolutions, key=lambda item: item["property"])
 
 
 def _resolve_binding(
@@ -242,13 +254,11 @@ def _resolve_binding(
     config = binding["config"]
     target, resolutions = _resolve_target(
         source=source,
+        semantic=semantic,
         config=config,
         c_symbol_prefix=settings["flight_contract"]["c_symbol_prefix"],
     )
-    core_semantics: dict[str, Any] = {
-        "origin": "core",
-        "source": semantic,
-    }
+    core_semantics: dict[str, Any] = {"origin": "core", "source": semantic}
 
     if config["kind"] == "housekeeping_packet":
         member_ids = semantic.get("telemetry", [])
@@ -262,6 +272,7 @@ def _resolve_binding(
             if isinstance(item, dict) and isinstance(item.get("id"), str)
         }
         members = []
+        target_members = []
         for member_id in member_ids:
             member = telemetry_index.get(member_id)
             if member is None:
@@ -269,7 +280,27 @@ def _resolve_binding(
                     f"packet {source['id']} references missing telemetry {member_id}"
                 )
             members.append(member)
+            c_type = _c_type_for_core_type(member.get("type"))
+            field_name = _c_field_name(member_id)
+            target_members.append(
+                {"core_id": member_id, "c_type": c_type, "field_name": field_name}
+            )
+            resolutions.extend(
+                [
+                    {
+                        "property": f"target.members.{member_id}.c_type",
+                        "origin": "adapter_default",
+                        "value": c_type,
+                    },
+                    {
+                        "property": f"target.members.{member_id}.field_name",
+                        "origin": "adapter_default",
+                        "value": field_name,
+                    },
+                ]
+            )
         core_semantics["telemetry_members"] = members
+        target["members"] = target_members
 
     return {
         "binding_id": binding["id"],
@@ -277,20 +308,21 @@ def _resolve_binding(
         "sources": [{"domain": source["domain"], "id": source["id"]}],
         "core_semantics": core_semantics,
         "target": target,
-        "resolutions": resolutions,
+        "resolutions": sorted(resolutions, key=lambda item: item["property"]),
     }
 
 
 def _resolve_target(
-    *, source: dict[str, Any], config: dict[str, Any], c_symbol_prefix: str
+    *,
+    source: dict[str, Any],
+    semantic: dict[str, Any],
+    config: dict[str, Any],
+    c_symbol_prefix: str,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    target: dict[str, Any] = {"kind": config["kind"]}
+    kind = config["kind"]
+    target: dict[str, Any] = {"kind": kind}
     resolutions: list[dict[str, Any]] = [
-        {
-            "property": "target.kind",
-            "origin": "profile",
-            "value": config["kind"],
-        }
+        {"property": "target.kind", "origin": "profile", "value": kind}
     ]
 
     for name in ("numeric_id", "sid", "pus", "verification"):
@@ -300,7 +332,7 @@ def _resolve_target(
                 {"property": f"target.{name}", "origin": "profile", "value": config[name]}
             )
 
-    if config["kind"] != "housekeeping_packet":
+    if kind != "housekeeping_packet":
         srdb_name = config.get("srdb_name", source["id"])
         target["srdb_name"] = srdb_name
         resolutions.append(
@@ -313,27 +345,124 @@ def _resolve_target(
 
     c_symbol = config.get("c_symbol")
     if c_symbol is None:
-        c_symbol = _derive_c_symbol(c_symbol_prefix, source["id"])
+        c_symbol = _derive_c_symbol(c_symbol_prefix, kind, source["id"])
         c_symbol_origin = "adapter_default"
     else:
         c_symbol_origin = "profile"
     target["c_symbol"] = c_symbol
     resolutions.append(
-        {
-            "property": "target.c_symbol",
-            "origin": c_symbol_origin,
-            "value": c_symbol,
-        }
+        {"property": "target.c_symbol", "origin": c_symbol_origin, "value": c_symbol}
     )
-    return target, sorted(resolutions, key=lambda item: item["property"])
+
+    if kind == "telemetry_parameter":
+        c_type = _c_type_for_core_type(semantic.get("type"))
+        field_name = _c_field_name(source["id"])
+        target["c_type"] = c_type
+        target["field_name"] = field_name
+        resolutions.extend(
+            [
+                {
+                    "property": "target.c_type",
+                    "origin": "adapter_default",
+                    "value": c_type,
+                },
+                {
+                    "property": "target.field_name",
+                    "origin": "adapter_default",
+                    "value": field_name,
+                },
+            ]
+        )
+    elif kind == "housekeeping_packet":
+        struct_type = _hk_struct_type(source["id"])
+        interval_s = _period_to_seconds(semantic.get("period"))
+        target["struct_type"] = struct_type
+        target["collection_interval_s"] = interval_s
+        resolutions.extend(
+            [
+                {
+                    "property": "target.struct_type",
+                    "origin": "adapter_default",
+                    "value": struct_type,
+                },
+                {
+                    "property": "target.collection_interval_s",
+                    "origin": "adapter_default",
+                    "value": interval_s,
+                },
+            ]
+        )
+
+    return target, resolutions
 
 
-def _derive_c_symbol(prefix: str, core_id: str) -> str:
-    body = re.sub(r"[^A-Za-z0-9_]", "_", core_id).upper()
-    body = re.sub(r"_+", "_", body).strip("_")
-    if not body:
+def _derive_c_symbol(prefix: str, kind: str, core_id: str) -> str:
+    if kind == "telemetry_parameter":
+        role = "TM_"
+        body = _drop_domain_segment(core_id)
+    elif kind == "command":
+        role = "CMD_"
+        body = core_id.split(".")[-1]
+    elif kind == "event":
+        role = "EVENT_"
+        body = core_id.split(".")[-1]
+    elif kind == "housekeeping_packet":
+        role = "HK_SET_"
+        body = core_id[:-3] if core_id.endswith("_hk") else core_id
+    else:
+        raise ValidationInputError(f"unsupported projection kind for C symbol: {kind}")
+    normalized = re.sub(r"[^A-Za-z0-9_]", "_", body).upper()
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    if not normalized:
         raise ValidationInputError(f"cannot derive C symbol from Core id: {core_id}")
-    return f"{prefix}{body}"
+    return f"{prefix}{role}{normalized}"
+
+
+def _drop_domain_segment(core_id: str) -> str:
+    parts = core_id.split(".")
+    return ".".join(parts[1:]) if len(parts) >= 3 else core_id
+
+
+def _c_field_name(core_id: str) -> str:
+    body = _drop_domain_segment(core_id)
+    normalized = re.sub(r"[^A-Za-z0-9_]", "_", body).lower()
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    if not normalized or normalized[0].isdigit():
+        raise ValidationInputError(f"cannot derive C field name from Core id: {core_id}")
+    return normalized
+
+
+def _c_type_for_core_type(core_type: Any) -> str:
+    mapping = {"uint16": "uint16_t"}
+    try:
+        return mapping[core_type]
+    except (KeyError, TypeError) as exc:
+        raise ValidationInputError(
+            f"unsupported Core telemetry type for C flight contract: {core_type}"
+        ) from exc
+
+
+def _hk_struct_type(packet_id: str) -> str:
+    base = packet_id[:-3] if packet_id.endswith("_hk") else packet_id
+    normalized = re.sub(r"[^A-Za-z0-9_]", "_", base).lower()
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    if not normalized:
+        raise ValidationInputError(f"cannot derive HK C struct type from packet id: {packet_id}")
+    return f"of_hk_{normalized}_t"
+
+
+def _period_to_seconds(period: Any) -> int:
+    if not isinstance(period, str):
+        raise ValidationInputError("housekeeping packet period is required for flight contract")
+    match = re.fullmatch(r"\s*(\d+)\s*s\s*", period)
+    if match is None:
+        raise ValidationInputError(
+            f"unsupported housekeeping period for C flight contract: {period}"
+        )
+    value = int(match.group(1))
+    if value <= 0:
+        raise ValidationInputError("housekeeping collection interval must be positive")
+    return value
 
 
 def _resolve_exclusion(binding: dict[str, Any]) -> dict[str, Any]:
