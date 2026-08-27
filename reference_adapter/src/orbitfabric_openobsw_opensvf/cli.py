@@ -6,7 +6,9 @@ from pathlib import Path
 import sys
 
 from .flight_contract import FlightContractError, materialize_flight_contract
-from .resolver import ProjectionResolutionError, write_resolved_projection
+from .opensvf_srdb import OpenSvfSrdbError, materialize_opensvf_srdb
+from .projection_pipeline import write_resolved_projection
+from .resolver import ProjectionResolutionError
 from .validator import ValidationInputError, validate_profile
 
 
@@ -22,6 +24,21 @@ def _add_common_projection_inputs(parser: argparse.ArgumentParser) -> None:
         required=True,
         type=Path,
         help="Path to the OpenOBSW/OpenSVF Projection Profile YAML",
+    )
+
+
+def _add_resolved_input(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--resolved-projection",
+        required=True,
+        type=Path,
+        help="Path to adapter-owned resolved_projection.json",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        type=Path,
+        help="Output artifact path",
     )
 
 
@@ -52,18 +69,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "generate-flight-contract",
         help="Materialize mission_contract.h from a resolved projection model",
     )
-    flight.add_argument(
-        "--resolved-projection",
-        required=True,
-        type=Path,
-        help="Path to adapter-owned resolved_projection.json",
+    _add_resolved_input(flight)
+
+    srdb = subparsers.add_parser(
+        "generate-opensvf-srdb",
+        help="Materialize OpenSVF SRDB YAML from a resolved projection model",
     )
-    flight.add_argument(
-        "--output",
-        required=True,
-        type=Path,
-        help="Path where mission_contract.h will be written",
-    )
+    _add_resolved_input(srdb)
     return parser
 
 
@@ -91,7 +103,6 @@ def main(argv: list[str] | None = None) -> int:
         if result.ok:
             print("Projection Profile validation: PASS")
             return 0
-
         for diagnostic in result.diagnostics:
             print(f"ERROR {diagnostic.code}: {diagnostic.message}", file=sys.stderr)
         print(
@@ -136,6 +147,19 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         print(f"Flight contract written to: {written}")
         print("Flight contract materialization: PASS")
+        return 0
+
+    if args.command == "generate-opensvf-srdb":
+        try:
+            written = materialize_opensvf_srdb(
+                resolved_projection_file=args.resolved_projection,
+                output_file=args.output,
+            )
+        except OpenSvfSrdbError as exc:
+            print(f"ERROR opensvf-srdb: {exc}", file=sys.stderr)
+            return 2
+        print(f"OpenSVF SRDB written to: {written}")
+        print("OpenSVF SRDB materialization: PASS")
         return 0
 
     raise AssertionError(f"unhandled command: {args.command}")
