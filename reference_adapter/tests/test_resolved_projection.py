@@ -42,7 +42,7 @@ def _make_input_set(tmp_path: Path) -> Path:
             "limits": {"warning_low": 4700, "critical_low": 4500},
             "enum": None,
             "quality": None,
-            "description": None,
+            "description": "Minimal PoC telemetry parameter representing the OBC bus voltage in raw millivolts.",
         }
     ]
     packets = [
