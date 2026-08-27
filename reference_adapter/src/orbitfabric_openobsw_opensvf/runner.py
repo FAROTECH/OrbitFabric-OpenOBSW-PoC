@@ -4,22 +4,22 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
-from .flight_contract import write_flight_contract
+from .flight_contract import FlightContractError, write_flight_contract
 from .integration_result import (
     ADAPTER_ID,
-    PROJECT_CAPABILITIES,
     artifact_record,
-    available_provenance,
     build_mappings,
     build_success_result,
+    core_provenance,
     failed_result,
     file_sha256,
+    profile_provenance,
     unavailable_core,
     unavailable_mission,
     unavailable_profile,
     write_result_last,
 )
-from .opensvf_srdb import write_opensvf_srdb
+from .opensvf_srdb import OpenSvfSrdbError, write_opensvf_srdb
 from .projection_pipeline import resolve_projection
 from .resolver import ProjectionResolutionError
 from .validator import Diagnostic, ValidationInputError, validate_profile
@@ -108,51 +108,48 @@ def _not_generated_artifacts(reason: str) -> list[dict[str, Any]]:
     ]
 
 
-def _reset_bundle_marker_and_known_artifacts(output_dir: Path) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    for relative in ("integration_result.json", FLIGHT_RELATIVE_PATH, SRDB_RELATIVE_PATH):
+def _remove_known_artifacts(output_dir: Path) -> None:
+    for relative in (FLIGHT_RELATIVE_PATH, SRDB_RELATIVE_PATH):
         path = output_dir / relative
         if path.is_file():
             path.unlink()
+
+
+def _reset_bundle_marker_and_known_artifacts(output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    marker = output_dir / "integration_result.json"
+    if marker.is_file():
+        marker.unlink()
+    _remove_known_artifacts(output_dir)
 
 
 def _best_effort_provenance(
     manifest_path: Path, profile_path: Path
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str | None]:
     try:
-        _, profile_doc, core, profile, mission = available_provenance(
-            manifest_path=manifest_path, profile_path=profile_path
-        )
-        integration = profile_doc.get("integration")
-        schema_version = (
-            integration.get("schema_version")
-            if isinstance(integration, dict) and isinstance(integration.get("schema_version"), str)
-            else None
-        )
-        return core, profile, mission, schema_version
+        _, core, mission = core_provenance(manifest_path)
     except ValidationInputError as exc:
-        message = str(exc)
-        # Do not promote guessed/partial identity into B.3 provenance.
-        return (
-            unavailable_core(message),
-            unavailable_profile(message),
-            unavailable_mission("Core input identity unavailable"),
-            None,
-        )
+        core = unavailable_core(str(exc))
+        mission = unavailable_mission("Core input identity unavailable")
+
+    try:
+        _, profile, schema_version = profile_provenance(profile_path)
+    except ValidationInputError as exc:
+        profile = unavailable_profile(str(exc))
+        schema_version = None
+
+    return core, profile, mission, schema_version
 
 
 def run_operation(
     *, operation_id: str, manifest_path: Path, profile_path: Path,
     output_dir: Path, schema_path: Path
 ) -> tuple[int, Path | None]:
-    """Execute orbitfabric.adapter_cli.v0 run semantics.
-
-    Return (process_exit_status, integration_result_path_if_written).
-    """
+    """Execute orbitfabric.adapter_cli.v0 run semantics."""
     _reset_bundle_marker_and_known_artifacts(output_dir)
     adapter_ver = adapter_version()
 
-    core, profile_provenance, mission, schema_version = _best_effort_provenance(
+    core, profile_value, mission, schema_version = _best_effort_provenance(
         manifest_path, profile_path
     )
 
@@ -162,8 +159,9 @@ def run_operation(
             operation_id=operation_id,
             schema_version=schema_version,
             core=core,
-            profile=profile_provenance,
+            profile=profile_value,
             mission=mission,
+            capabilities=[],
             diagnostics=_exception_diagnostic(
                 phase="input_compatibility",
                 code="operation.unsupported",
@@ -186,8 +184,9 @@ def run_operation(
             operation_id=operation_id,
             schema_version=schema_version,
             core=core,
-            profile=profile_provenance,
+            profile=profile_value,
             mission=mission,
+            capabilities=["profile_validation"],
             diagnostics=_exception_diagnostic(
                 phase="input_compatibility",
                 code="input.read",
@@ -204,8 +203,9 @@ def run_operation(
             operation_id=operation_id,
             schema_version=schema_version,
             core=core,
-            profile=profile_provenance,
+            profile=profile_value,
             mission=mission,
+            capabilities=["profile_validation"],
             diagnostics=_result_diagnostics(validation.diagnostics),
             artifacts=_not_generated_artifacts("projection validation failed"),
             coverage_reason="Projection validation failed before reliable coverage resolution",
@@ -224,8 +224,9 @@ def run_operation(
             operation_id=operation_id,
             schema_version=schema_version,
             core=core,
-            profile=profile_provenance,
+            profile=profile_value,
             mission=mission,
+            capabilities=["profile_validation", "projection"],
             diagnostics=_result_diagnostics(list(exc.diagnostics)),
             artifacts=_not_generated_artifacts("projection resolution failed"),
             coverage_reason="Projection resolution failed",
@@ -237,8 +238,9 @@ def run_operation(
             operation_id=operation_id,
             schema_version=schema_version,
             core=core,
-            profile=profile_provenance,
+            profile=profile_value,
             mission=mission,
+            capabilities=["profile_validation", "projection"],
             diagnostics=_exception_diagnostic(
                 phase="projection_validation",
                 code="projection.resolve",
@@ -262,14 +264,18 @@ def run_operation(
     try:
         write_flight_contract(resolved, flight_path)
         write_opensvf_srdb(resolved, srdb_path)
-    except Exception as exc:  # renderer exceptions are normalized at adapter boundary
+    except (FlightContractError, OpenSvfSrdbError, OSError) as exc:
+        # v0 chooses no retained partial artifacts: a failed required materialization
+        # leaves a failed Result plus explicit not_generated artifact records only.
+        _remove_known_artifacts(output_dir)
         result = failed_result(
             adapter_version=adapter_ver,
             operation_id=operation_id,
             schema_version=schema_version,
             core=core,
-            profile=profile_provenance,
+            profile=profile_value,
             mission=mission,
+            capabilities=["profile_validation", "projection", "artifact_generation", "traceability"],
             diagnostics=_exception_diagnostic(
                 phase="artifact_generation",
                 code="artifact.generate",
