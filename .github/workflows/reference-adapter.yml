@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - feature/reference-adapter-validate-profile
+      - feature/reference-adapter-core-handshake
       - architecture/reference-adapter-extraction-plan
   pull_request:
     paths:
       - "reference_adapter/**"
+      - "orbitfabric_models/mission/**"
+      - "orbitfabric_models/profiles/**"
       - "schemas/openobsw_opensvf_projection_profile_v0.schema.json"
       - ".github/workflows/reference-adapter.yml"
 
@@ -26,3 +29,32 @@ jobs:
         run: python -m pip install -e "reference_adapter[dev]"
       - name: Run adapter tests
         run: python -m pytest reference_adapter/tests -q
+
+  core-handshake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PoC
+        uses: actions/checkout@v4
+      - name: Checkout validated OrbitFabric Core producer
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric
+          ref: 82c103a6dec32eeadc5acfcb01d1a9c641a54a42
+          path: .deps/orbitfabric
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Core and reference adapter
+        run: |
+          python -m pip install -e .deps/orbitfabric
+          python -m pip install -e reference_adapter
+      - name: Export coherent Core Integration Input Set
+        run: |
+          orbitfabric export integration-input-set \
+            orbitfabric_models/mission \
+            --output-dir .handshake/integration_input
+      - name: Validate real PoC Projection Profile
+        run: |
+          orbitfabric-openobsw-opensvf validate-profile \
+            --input-set-manifest .handshake/integration_input/integration_input_manifest.json \
+            --profile orbitfabric_models/profiles/openobsw_opensvf_poc_v0.yaml
