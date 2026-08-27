@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbitfabric.dev/schemas/integrations/orbitfabric-openobsw-opensvf/projection-profile/0.1-candidate",
+  "title": "OrbitFabric OpenOBSW/OpenSVF Projection Profile v0",
+  "description": "Integration-owned full-document schema for the OpenOBSW/OpenSVF reference adapter candidate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "profile_version", "profile", "integration", "settings", "bindings"],
+  "properties": {
+    "kind": {"const": "orbitfabric.projection_profile"},
+    "profile_version": {"const": "0.1-candidate"},
+    "profile": {"$ref": "#/$defs/profileIdentity"},
+    "integration": {"$ref": "#/$defs/integrationIdentity"},
+    "settings": {"$ref": "#/$defs/settings"},
+    "bindings": {"type": "array", "items": {"$ref": "#/$defs/binding"}}
+  },
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "profileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "version": {"$ref": "#/$defs/nonEmptyString"},
+        "description": {"type": "string"}
+      }
+    },
+    "integrationIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "schema_version"],
+      "properties": {
+        "id": {"const": "orbitfabric-openobsw-opensvf"},
+        "schema_version": {"const": "0.1-candidate"}
+      }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flight_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "c_symbol_prefix": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          }
+        },
+        "opensvf": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "domain_apids": {
+              "type": "object",
+              "propertyNames": {"pattern": "^[A-Z][A-Z0-9_]*$"},
+              "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 2047}
+            }
+          }
+        }
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "id"],
+      "properties": {
+        "domain": {"$ref": "#/$defs/nonEmptyString"},
+        "id": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "singleTelemetrySource": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "prefixItems": [{"allOf": [{"$ref": "#/$defs/sourceRef"}, {"properties": {"domain": {"const": "telemetry"}}}]}]
+    },
+    "singlePacketSource": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "prefixItems": [{"allOf": [{"$ref": "#/$defs/sourceRef"}, {"properties": {"domain": {"const": "packets"}}}]}]
+    },
+    "singleCommandSource": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "prefixItems": [{"allOf": [{"$ref": "#/$defs/sourceRef"}, {"properties": {"domain": {"const": "commands"}}}]}]
+    },
+    "singleEventSource": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "prefixItems": [{"allOf": [{"$ref": "#/$defs/sourceRef"}, {"properties": {"domain": {"const": "events"}}}]}]
+    },
+    "pus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service", "subservice"],
+      "properties": {
+        "service": {"type": "integer", "minimum": 0, "maximum": 255},
+        "subservice": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    },
+    "cSymbol": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+    "srdbName": {"type": "string", "minLength": 1},
+    "numericId": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "telemetryConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "numeric_id"],
+      "properties": {
+        "kind": {"const": "telemetry_parameter"},
+        "numeric_id": {"$ref": "#/$defs/numericId"},
+        "srdb_name": {"$ref": "#/$defs/srdbName"},
+        "c_symbol": {"$ref": "#/$defs/cSymbol"}
+      }
+    },
+    "housekeepingConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sid", "pus"],
+      "properties": {
+        "kind": {"const": "housekeeping_packet"},
+        "sid": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "pus": {"$ref": "#/$defs/pus"},
+        "c_symbol": {"$ref": "#/$defs/cSymbol"}
+      }
+    },
+    "expectedTelemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "service", "subservice"],
+      "properties": {
+        "role": {"type": "string", "enum": ["acceptance", "execution_complete", "command_response", "other"]},
+        "service": {"type": "integer", "minimum": 0, "maximum": 255},
+        "subservice": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_telemetry"],
+      "properties": {
+        "expected_telemetry": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/expectedTelemetry"}}
+      }
+    },
+    "commandConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "numeric_id", "pus"],
+      "properties": {
+        "kind": {"const": "command"},
+        "numeric_id": {"$ref": "#/$defs/numericId"},
+        "srdb_name": {"$ref": "#/$defs/srdbName"},
+        "c_symbol": {"$ref": "#/$defs/cSymbol"},
+        "pus": {"$ref": "#/$defs/pus"},
+        "verification": {"$ref": "#/$defs/verification"}
+      }
+    },
+    "eventConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "numeric_id", "pus"],
+      "properties": {
+        "kind": {"const": "event"},
+        "numeric_id": {"$ref": "#/$defs/numericId"},
+        "srdb_name": {"$ref": "#/$defs/srdbName"},
+        "c_symbol": {"$ref": "#/$defs/cSymbol"},
+        "pus": {"$ref": "#/$defs/pus"}
+      }
+    },
+    "projectBindingBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "intent", "sources", "config"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "intent": {"const": "project"},
+        "sources": {"type": "array"},
+        "config": {"type": "object"},
+        "reason": {"type": "string"}
+      }
+    },
+    "telemetryBinding": {
+      "allOf": [
+        {"$ref": "#/$defs/projectBindingBase"},
+        {"properties": {"sources": {"$ref": "#/$defs/singleTelemetrySource"}, "config": {"$ref": "#/$defs/telemetryConfig"}}}
+      ]
+    },
+    "housekeepingBinding": {
+      "allOf": [
+        {"$ref": "#/$defs/projectBindingBase"},
+        {"properties": {"sources": {"$ref": "#/$defs/singlePacketSource"}, "config": {"$ref": "#/$defs/housekeepingConfig"}}}
+      ]
+    },
+    "commandBinding": {
+      "allOf": [
+        {"$ref": "#/$defs/projectBindingBase"},
+        {"properties": {"sources": {"$ref": "#/$defs/singleCommandSource"}, "config": {"$ref": "#/$defs/commandConfig"}}}
+      ]
+    },
+    "eventBinding": {
+      "allOf": [
+        {"$ref": "#/$defs/projectBindingBase"},
+        {"properties": {"sources": {"$ref": "#/$defs/singleEventSource"}, "config": {"$ref": "#/$defs/eventConfig"}}}
+      ]
+    },
+    "doNotProjectBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "intent", "sources", "config", "reason"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "intent": {"const": "do_not_project"},
+        "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}},
+        "config": {"type": "object", "maxProperties": 0},
+        "reason": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "binding": {
+      "oneOf": [
+        {"$ref": "#/$defs/telemetryBinding"},
+        {"$ref": "#/$defs/housekeepingBinding"},
+        {"$ref": "#/$defs/commandBinding"},
+        {"$ref": "#/$defs/eventBinding"},
+        {"$ref": "#/$defs/doNotProjectBinding"}
+      ]
+    }
+  }
+}
