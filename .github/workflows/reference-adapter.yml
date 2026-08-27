@@ -7,6 +7,7 @@ on:
       - feature/reference-adapter-core-handshake
       - feature/reference-adapter-resolved-projection
       - feature/reference-adapter-flight-contract
+      - feature/reference-adapter-opensvf-srdb
       - architecture/reference-adapter-extraction-plan
   pull_request:
     paths:
@@ -43,6 +44,12 @@ jobs:
           repository: FAROTECH/orbitfabric
           ref: 82c103a6dec32eeadc5acfcb01d1a9c641a54a42
           path: .deps/orbitfabric
+      - name: Checkout validated OpenSVF consumer
+        uses: actions/checkout@v4
+        with:
+          repository: lipofefeyt/opensvf
+          ref: 667d3eadcb0bbd7814ac324b99946c4ed2f11f23
+          path: .deps/opensvf
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -88,10 +95,19 @@ jobs:
           assert telemetry['target']['srdb_name'] == 'eps.obc.bus_voltage_mv'
           assert telemetry['target']['c_symbol'] == 'OF_TM_OBC_BUS_VOLTAGE_MV'
           assert telemetry['target']['c_type'] == 'uint16_t'
-          assert next(
-              item for item in telemetry['resolutions']
-              if item['property'] == 'target.c_symbol'
-          )['origin'] == 'adapter_default'
+          assert telemetry['target']['opensvf'] == {
+              'classification': 'TM',
+              'domain': 'EPS',
+              'dtype': 'int',
+              'model_id': 'eps',
+              'pus': {
+                  'apid': 0x100,
+                  'parameter_id': 0x4001,
+                  'service': 3,
+                  'subservice': 25,
+              },
+              'valid_range': [0.0, 65535.0],
+          }
           PY
       - name: Materialize C flight contract
         run: |
@@ -119,3 +135,14 @@ jobs:
             .handshake/flight/contract_smoke.c \
             -o .handshake/flight/contract_smoke
           .handshake/flight/contract_smoke
+      - name: Materialize OpenSVF SRDB
+        run: |
+          orbitfabric-openobsw-opensvf generate-opensvf-srdb \
+            --resolved-projection .handshake/resolved_projection.json \
+            --output .handshake/ground/poc_srdb.yaml
+      - name: Validate SRDB through real OpenSVF and XTCE generation
+        run: |
+          python tools/validate_opensvf_srdb_xtce.py \
+            --opensvf-repo .deps/opensvf \
+            --srdb .handshake/ground/poc_srdb.yaml \
+            --output .handshake/ground/opensvf.xml
