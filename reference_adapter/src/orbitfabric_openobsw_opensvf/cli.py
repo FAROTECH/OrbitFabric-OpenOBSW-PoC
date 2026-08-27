@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from importlib.resources import files
+from importlib.resources import as_file, files
 from pathlib import Path
 import sys
 
@@ -31,23 +31,20 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _packaged_schema_path() -> Path:
-    resource = files("orbitfabric_openobsw_opensvf").joinpath(
-        "schemas/openobsw_opensvf_projection_profile_v0.schema.json"
-    )
-    return Path(str(resource))
-
-
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
     if args.command == "validate-profile":
+        schema_resource = files("orbitfabric_openobsw_opensvf").joinpath(
+            "schemas/openobsw_opensvf_projection_profile_v0.schema.json"
+        )
         try:
-            result = validate_profile(
-                manifest_path=args.input_set_manifest,
-                profile_path=args.profile,
-                schema_path=_packaged_schema_path(),
-            )
+            with as_file(schema_resource) as schema_path:
+                result = validate_profile(
+                    manifest_path=args.input_set_manifest,
+                    profile_path=args.profile,
+                    schema_path=schema_path,
+                )
         except ValidationInputError as exc:
             print(f"ERROR input: {exc}", file=sys.stderr)
             return 2
