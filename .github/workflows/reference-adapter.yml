@@ -5,6 +5,7 @@ on:
     branches:
       - feature/reference-adapter-validate-profile
       - feature/reference-adapter-core-handshake
+      - feature/reference-adapter-resolved-projection
       - architecture/reference-adapter-extraction-plan
   pull_request:
     paths:
@@ -58,3 +59,34 @@ jobs:
           orbitfabric-openobsw-opensvf validate-profile \
             --input-set-manifest .handshake/integration_input/integration_input_manifest.json \
             --profile orbitfabric_models/profiles/openobsw_opensvf_poc_v0.yaml
+      - name: Resolve real PoC Projection Model
+        run: |
+          orbitfabric-openobsw-opensvf resolve-projection \
+            --input-set-manifest .handshake/integration_input/integration_input_manifest.json \
+            --profile orbitfabric_models/profiles/openobsw_opensvf_poc_v0.yaml \
+            --json .handshake/resolved_projection.json
+      - name: Verify resolved projection continuity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('.handshake/resolved_projection.json').read_text())
+          assert payload['kind'] == 'orbitfabric.openobsw_opensvf.resolved_projection'
+          assert [item['binding_id'] for item in payload['projections']] == [
+              'cmd.ping',
+              'event.voltage_out_of_bounds',
+              'hk.obc',
+              'tm.obc_bus_voltage',
+          ]
+          telemetry = next(
+              item for item in payload['projections']
+              if item['binding_id'] == 'tm.obc_bus_voltage'
+          )
+          assert telemetry['core_semantics']['source']['unit'] == 'mV'
+          assert telemetry['target']['srdb_name'] == 'eps.obc.bus_voltage_mv'
+          assert next(
+              item for item in telemetry['resolutions']
+              if item['property'] == 'target.srdb_name'
+          )['origin'] == 'adapter_default'
+          PY
