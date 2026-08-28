@@ -1,0 +1,82 @@
+# OrbitFabric OpenOBSW/OpenSVF reference Projection Profile extraction candidate
+#
+# Stage 7 extraction input derived from orbitfabric_models/poc_slice.yaml.
+# The legacy PoC mapping file is retained unchanged as historical evidence.
+#
+# This file follows the generic OrbitFabric Projection Profile Contract
+# 0.1-candidate envelope published with OrbitFabric Core v1.2.0.
+#
+# The integration-specific config vocabulary below is an extraction candidate.
+# It is not schema-frozen until the package-local OpenOBSW/OpenSVF Profile
+# schema is introduced and reviewed in Stage 7.1.
+#
+# Numeric IDs and SID values are carried forward from the exercised PoC
+# allocation. Their long-term allocation/stability policy is also a Stage 7.1
+# integration-schema decision; this file does not promote them to a generic
+# OrbitFabric ABI or Core-owned identifier space.
+
+kind: orbitfabric.projection_profile
+profile_version: 0.1-candidate
+
+profile:
+  id: poc-openobsw-opensvf
+  version: 0.1.0
+  description: Reference projection choices extracted from the proven OpenOBSW/OpenSVF PoC vertical slice.
+
+integration:
+  id: orbitfabric-openobsw-opensvf
+  schema_version: 0.1-candidate
+
+settings:
+  c_prefix: OF_
+
+bindings:
+  - id: tm.obc_bus_voltage
+    intent: project
+    sources:
+      - domain: telemetry
+        id: eps.obc.bus_voltage_mv
+    config:
+      numeric_id: 0x4001
+      pus:
+        service: 3
+        subtype: 25
+
+  - id: packet.obc_hk
+    intent: project
+    sources:
+      - domain: packets
+        id: obc_hk
+    config:
+      housekeeping:
+        sid: 0x01
+
+  - id: cmd.ping
+    intent: project
+    sources:
+      - domain: commands
+        id: obc.ping
+    config:
+      numeric_id: 0x1701
+      srdb_name: dhs.obc.ping
+      pus:
+        service: 17
+        subtype: 1
+      expected_responses:
+        - service: 1
+          subtype: 1
+        - service: 17
+          subtype: 2
+        - service: 1
+          subtype: 7
+
+  - id: event.voltage_out_of_bounds
+    intent: project
+    sources:
+      - domain: events
+        id: eps.voltage_out_of_bounds
+    config:
+      numeric_id: 0x5001
+      pus:
+        service: 5
+        subtype: 3
