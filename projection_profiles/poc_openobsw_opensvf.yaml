@@ -1,34 +1,52 @@
-# OrbitFabric OpenOBSW/OpenSVF reference Projection Profile extraction candidate
+# OrbitFabric OpenOBSW/OpenSVF reference Projection Profile candidate
 #
-# Stage 7 extraction input derived from orbitfabric_models/poc_slice.yaml.
-# The legacy PoC mapping file is retained unchanged as historical evidence.
+# Stage 7.1 candidate derived from the exercised PoC while removing copied
+# Core semantics and aligning target choices with the real obsw-srdb 0.1.0
+# data model used by the OpenOBSW/OpenSVF integration boundary.
 #
 # This file follows the generic OrbitFabric Projection Profile Contract
 # 0.1-candidate envelope published with OrbitFabric Core v1.2.0.
 #
-# The integration-specific config vocabulary below is an extraction candidate.
-# It is not schema-frozen until the package-local OpenOBSW/OpenSVF Profile
-# schema is introduced and reviewed in Stage 7.1.
+# Profile version 0.3.0 records a material target-model correction:
 #
-# Numeric IDs and SID values are carried forward from the exercised PoC
-# allocation. Their long-term allocation/stability policy is also a Stage 7.1
-# integration-schema decision; this file does not promote them to a generic
-# OrbitFabric ABI or Core-owned identifier space.
+# - obsw-srdb parameter IDs are modeled as SRDB allocations, not as TM(3,25)
+#   wire field identifiers.
+# - HK packing order is explicit target configuration on the packet binding.
+# - event PUS subtype is derived from an explicit Core-to-obsw-srdb severity
+#   projection policy rather than duplicating Core event severity per binding.
+# - the Profile selects an explicit tested compatibility baseline.
+# - TM and TC APIDs remain distinct target settings.
+#
+# The 0x6001 parameter ID and SID 0x05 are allocations of this reference
+# Profile only. Stage 7.2 compatibility preflight must validate them against
+# the selected target baseline.
 
 kind: orbitfabric.projection_profile
 profile_version: 0.1-candidate
 
 profile:
   id: poc-openobsw-opensvf
-  version: 0.1.0
-  description: Reference projection choices extracted from the proven OpenOBSW/OpenSVF PoC vertical slice.
+  version: 0.3.0
+  description: Reference projection choices extracted and target-model-audited from the proven OpenOBSW/OpenSVF PoC vertical slice.
 
 integration:
   id: orbitfabric-openobsw-opensvf
   schema_version: 0.1-candidate
 
 settings:
-  c_prefix: OF_
+  compatibility:
+    target_baseline: openobsw-0.7.0-obsw-srdb-0.1.0-reference
+  flight_contract:
+    c_prefix: OF_
+  pus:
+    tm_apid: 0x103
+    tc_apid: 0x010
+  obsw_srdb:
+    event_severity_map:
+      info: INFO
+      warning: MEDIUM
+      error: HIGH
+      critical: HIGH
 
 bindings:
   - id: tm.obc_bus_voltage
@@ -37,10 +55,10 @@ bindings:
       - domain: telemetry
         id: eps.obc.bus_voltage_mv
     config:
-      numeric_id: 0x4001
-      pus:
-        service: 3
-        subtype: 25
+      flight_contract:
+        c_symbol: OF_TM_OBC_BUS_VOLTAGE_MV
+      obsw_srdb:
+        parameter_id: 0x6001
 
   - id: packet.obc_hk
     intent: project
@@ -48,8 +66,14 @@ bindings:
       - domain: packets
         id: obc_hk
     config:
-      housekeeping:
-        sid: 0x01
+      flight_contract:
+        c_symbol: OF_HK_SET_OBC
+      obsw_srdb:
+        hk_set:
+          sid: 0x05
+          fields:
+            - domain: telemetry
+              id: eps.obc.bus_voltage_mv
 
   - id: cmd.ping
     intent: project
@@ -57,8 +81,9 @@ bindings:
       - domain: commands
         id: obc.ping
     config:
-      numeric_id: 0x1701
-      srdb_name: dhs.obc.ping
+      flight_contract:
+        c_symbol: OF_CMD_PING
+        command_id: 0x1701
       pus:
         service: 17
         subtype: 1
@@ -76,7 +101,7 @@ bindings:
       - domain: events
         id: eps.voltage_out_of_bounds
     config:
-      numeric_id: 0x5001
-      pus:
-        service: 5
-        subtype: 3
+      flight_contract:
+        c_symbol: OF_EVENT_VOLTAGE_OUT_OF_BOUNDS
+      obsw_srdb:
+        event_id: 0x5001
