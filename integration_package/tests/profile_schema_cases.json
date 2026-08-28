@@ -260,6 +260,17 @@
       ]
     },
     {
+      "name": "accept_command_id_independent_from_pus_encoding",
+      "expected_valid": true,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 2, "config", "flight_contract", "command_id"],
+          "value": 28929
+        }
+      ]
+    },
+    {
       "name": "reject_obsw_srdb_on_command",
       "expected_valid": false,
       "mutations": [

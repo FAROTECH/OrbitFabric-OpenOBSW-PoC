@@ -83,6 +83,9 @@ bindings:
     config:
       flight_contract:
         c_symbol: OF_CMD_PING
+        # Independent flight-contract ABI allocation. The inherited PoC value
+        # happens to equal (17 << 8) | 1, but it is not derived from the PUS
+        # service/subtype tuple and no equality invariant exists.
         command_id: 0x1701
       pus:
         service: 17

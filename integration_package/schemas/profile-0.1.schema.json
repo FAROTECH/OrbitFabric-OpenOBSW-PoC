@@ -247,6 +247,7 @@
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
         },
         "command_id": {
+          "description": "Independent 16-bit flight-contract ABI allocation. It is not derived from PUS service/subtype; numeric equality with a PUS-derived value is permitted but has no semantic meaning.",
           "$ref": "#/$defs/id16"
         }
       }
