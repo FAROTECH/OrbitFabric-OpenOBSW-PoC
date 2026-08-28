@@ -1,0 +1,356 @@
+{
+  "kind": "orbitfabric.openobsw_opensvf.preflight_design_cases",
+  "cases_version": "0.1-candidate",
+  "status": "design_only",
+  "operation": "project",
+  "cases": [
+    {
+      "id": "canonical_current_upstream",
+      "mutation": null,
+      "expected": {
+        "semantic_target_preflight": "compatible",
+        "srdb_contribution_generation": "compatible",
+        "native_target_application": "not_applicable",
+        "required_preflight": "passed",
+        "artifact_generation_allowed": true,
+        "command_resolution": "reuse_existing",
+        "command_target": "are_you_alive"
+      }
+    },
+    {
+      "id": "native_merge_api_absent_is_not_project_blocker",
+      "mutation": "audited obsw-srdb baseline continues to expose no extension or overlay merge API",
+      "expected": {
+        "native_target_application": "not_applicable",
+        "required_preflight": "passed",
+        "artifact_generation_allowed": true,
+        "reason": "project generates contribution artifacts and does not apply them to a target checkout"
+      }
+    },
+    {
+      "id": "contribution_must_not_claim_complete_srdb",
+      "mutation": "attempt to label the generated contribution bundle as a complete applied SRDB",
+      "expected": {
+        "required_preflight": "failed_before_artifact_commit",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-PROJ-SRDB-001",
+        "phase": "projection_validation"
+      }
+    },
+    {
+      "id": "missing_target_baseline",
+      "mutation": "remove settings.compatibility.target_baseline",
+      "expected": {
+        "required_preflight": "failed_before_target_projection",
+        "artifact_generation_allowed": false,
+        "phase": "profile_schema_or_projection_validation"
+      }
+    },
+    {
+      "id": "unknown_target_baseline",
+      "mutation": "set target_baseline to unknown-baseline",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-BASELINE-001",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "invalid_package_baseline_resource",
+      "mutation": "make package baseline resource invalid or use unsupported baseline_version",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-BASELINE-002",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "unresolved_core_source",
+      "mutation": "replace a Profile source with a Core ID absent from consumed Entity Index",
+      "expected": {
+        "required_preflight": "failed_before_target_checks",
+        "artifact_generation_allowed": false,
+        "phase": "source_resolution"
+      }
+    },
+    {
+      "id": "hk_field_not_member_of_core_packet",
+      "mutation": "set packet.obc_hk hk_set.fields to a telemetry source that is not a member of Core packet obc_hk",
+      "expected": {
+        "required_preflight": "failed_before_external_target_checks",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-PROJ-HK-001",
+        "phase": "projection_validation"
+      }
+    },
+    {
+      "id": "hk_field_has_no_projected_telemetry_binding",
+      "mutation": "add a Core packet telemetry member to hk_set.fields without a project telemetry binding for that source",
+      "expected": {
+        "required_preflight": "failed_before_external_target_checks",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-PROJ-HK-002",
+        "phase": "projection_validation"
+      }
+    },
+    {
+      "id": "unsupported_core_telemetry_type",
+      "mutation": "resolve referenced Core telemetry as float64",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-PROJ-TYPE-001",
+        "phase": "projection_validation"
+      }
+    },
+    {
+      "id": "supported_uint16_telemetry_type",
+      "mutation": "canonical Core telemetry type remains uint16",
+      "expected": {
+        "target_representation": {
+          "type": "uint16",
+          "ptc": 1,
+          "pfc": 16
+        },
+        "representation_check": "compatible"
+      }
+    },
+    {
+      "id": "tm_apid_mismatch",
+      "mutation": "set settings.pus.tm_apid to 0x104 while selected OpenOBSW baseline emits TM from 0x103",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-PUS-001",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "tc_apid_differs_from_tm_apid",
+      "mutation": "canonical TC representation remains 0x010 while TM APID is 0x103",
+      "expected": {
+        "compatibility_check": "compatible",
+        "reason": "TM and TC representation APIDs are distinct target concerns"
+      }
+    },
+    {
+      "id": "tc_route_wildcard_accepts_reference_apid",
+      "mutation": "OpenOBSW OF_CMD_PING contract route remains wildcard APID",
+      "expected": {
+        "runtime_route_compatibility": "compatible",
+        "target_tc_representation_apid": 16
+      }
+    },
+    {
+      "id": "required_exact_response_missing",
+      "mutation": "remove TM(17,2) from selected tested baseline exact message capabilities",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-PUS-002",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "service_present_but_subtype_missing",
+      "mutation": "baseline supports another Service 5 subtype but not TM(5,3)",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-PUS-002",
+        "reason": "broad service support does not satisfy exact message compatibility"
+      }
+    },
+    {
+      "id": "secondary_header_layout_mismatch",
+      "mutation": "selected OpenOBSW baseline declares a TM secondary header size inconsistent with tested obsw-srdb application-data bit offset",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-PUS-004",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "parameter_id_collision",
+      "mutation": "set tm.obc_bus_voltage obsw_srdb.parameter_id to occupied target ID 0x4001",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-ALLOC-001",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "parameter_name_collision",
+      "mutation": "derive target parameter name obc_mode for a new Core telemetry source while baseline obc_mode already exists with a different contract",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-NAME-001",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "event_id_collision",
+      "mutation": "set event.voltage_out_of_bounds obsw_srdb.event_id to occupied target event ID 0x0020",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-ALLOC-002",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "hk_sid_collision",
+      "mutation": "set packet.obc_hk hk_set.sid to occupied target SID 3",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-ALLOC-003",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "same_numeric_value_different_namespace",
+      "mutation": "use numeric value 0x6001 for both parameter ID and event ID while both namespaces remain internally unique",
+      "expected": {
+        "allocation_check": "compatible",
+        "reason": "parameter and event ID namespaces are independent"
+      }
+    },
+    {
+      "id": "existing_tc_tuple_compatible",
+      "mutation": "canonical obc.ping resolves to existing APID 0x010 TC(17,1) with no arguments",
+      "expected": {
+        "telecommand_resolution": "reuse_existing",
+        "target_name": "are_you_alive",
+        "telecommand_contribution_generated": false,
+        "compatibility_check": "compatible"
+      }
+    },
+    {
+      "id": "existing_tc_tuple_argument_mismatch",
+      "mutation": "Core command mapped to existing APID 0x010 TC(17,1) resolves with one argument while target are_you_alive has none",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-TC-001",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "new_tc_free_tuple_with_supported_runtime",
+      "mutation": "project a command to a free target TC tuple whose exact message is supported by the selected baseline",
+      "expected": {
+        "telecommand_resolution": "contribute_new",
+        "telecommand_contribution_generated": true,
+        "target_application": "not_performed",
+        "compatibility_check": "compatible"
+      }
+    },
+    {
+      "id": "new_tc_without_runtime_message_support",
+      "mutation": "project a command to a free TC tuple whose exact PUS message is not supported by selected OpenOBSW runtime baseline",
+      "expected": {
+        "required_preflight": "failed",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-COMP-TC-002",
+        "phase": "input_compatibility"
+      }
+    },
+    {
+      "id": "warning_event_severity_projection",
+      "mutation": "canonical Core event severity is warning",
+      "expected": {
+        "obsw_srdb_severity": "MEDIUM",
+        "resolved_pus_message": {
+          "direction": "TM",
+          "service": 5,
+          "subtype": 3
+        }
+      }
+    },
+    {
+      "id": "event_safe_trigger_not_generated_from_core_recovery",
+      "mutation": "Core fault emitting the event has recovery mode_transition SAFE",
+      "expected": {
+        "obsw_srdb_safe_trigger": false,
+        "origin": "adapter_default",
+        "reason": "runtime behavior remains OpenOBSW-owned and fault projection is outside first schema scope"
+      }
+    },
+    {
+      "id": "core_warning_limit_mapping",
+      "mutation": "canonical telemetry has warning_high 3500",
+      "expected": {
+        "obsw_srdb_limits": {
+          "soft_high": 3500
+        },
+        "origin": "core"
+      }
+    },
+    {
+      "id": "core_packet_period_not_converted_to_hk_schedule",
+      "mutation": "canonical Core packet period remains 1s",
+      "expected": {
+        "obsw_srdb_default_interval_ticks": 0,
+        "origin": "adapter_default",
+        "reason": "Core logical packet period is not an OpenOBSW scheduler tick contract"
+      }
+    },
+    {
+      "id": "contribution_cross_reference_failure",
+      "mutation": "generate HK contribution field name that resolves to neither a contribution parameter nor an explicitly reused baseline parameter",
+      "expected": {
+        "required_preflight": "failed_before_artifact_commit",
+        "artifact_generation_allowed": false,
+        "diagnostic": "OFI-PROJ-SRDB-001",
+        "phase": "projection_validation"
+      }
+    },
+    {
+      "id": "legacy_opensvf_xtce_script_is_not_target_authority",
+      "mutation": "legacy OpenSVF-local tools/generate_xtce.py differs from obsw-srdb codegen behavior",
+      "expected": {
+        "check_state": "not_applicable",
+        "reason": "production projection targets obsw-srdb record vocabulary and OrbitFabric does not use or patch the legacy OpenSVF-local XTCE script"
+      }
+    },
+    {
+      "id": "wire_protocol_marker_unavailable",
+      "mutation": "machine-readable wire protocol version remains unavailable",
+      "expected": {
+        "check_state": "not_applicable",
+        "reason": "project does not execute runtime transport"
+      }
+    },
+    {
+      "id": "obc_emulator_adapter_api_marker_unavailable",
+      "mutation": "OBCEmulatorAdapter has no separate API version marker",
+      "expected": {
+        "check_state": "not_applicable",
+        "reason": "project does not call OBCEmulatorAdapter"
+      }
+    },
+    {
+      "id": "runtime_materialization_absent",
+      "mutation": "selected runtime baseline does not consume a generated telemetry or HK symbol",
+      "expected": {
+        "static_projection_compatibility": "unchanged",
+        "reason": "runtime materialization is external evidence and is not the semantic meaning of static project coverage"
+      }
+    },
+    {
+      "id": "preflight_failure_artifact_invariant",
+      "mutation": "force any required compatibility check to incompatible or unavailable",
+      "expected": {
+        "artifact_generation_allowed": false,
+        "generated_target_artifacts": [],
+        "integration_result": "failed_when_technically_possible"
+      }
+    }
+  ]
+}
