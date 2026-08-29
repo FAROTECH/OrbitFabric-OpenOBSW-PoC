@@ -518,7 +518,7 @@
       "mutations": [
         {
           "op": "set",
-          "path": ["bindings", 0, "sources"],
+          "path": ["bindings", 2, "sources"],
           "value": [
             {
               "domain": "events",
@@ -528,7 +528,7 @@
         },
         {
           "op": "set",
-          "path": ["bindings", 0, "config"],
+          "path": ["bindings", 2, "config"],
           "value": {
             "flight_contract": {
               "c_symbol": "OF_EVENT_SYNTH"
