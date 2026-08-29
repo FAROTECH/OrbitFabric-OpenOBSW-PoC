@@ -1,0 +1,154 @@
+{
+  "kind": "orbitfabric.openobsw_opensvf.target_baseline",
+  "baseline_version": "0.1-candidate",
+  "id": "openobsw-0.7.0-obsw-srdb-0.1.0-reference",
+  "projection_target": {
+    "openobsw": {
+      "version": "0.7.0",
+      "commit": "b3b7c3fa9c6edd2a52eef356d113c1eae1b03fec"
+    },
+    "obsw_srdb": {
+      "version": "0.1.0",
+      "source_commit": "b3b7c3fa9c6edd2a52eef356d113c1eae1b03fec"
+    }
+  },
+  "project_contract": {
+    "operation": "project",
+    "handoff_mode": "obsw_srdb_contribution_bundle",
+    "target_application": "not_in_operation_scope",
+    "complete_srdb_claim_allowed": false
+  },
+  "project_compatibility": {
+    "pus": {
+      "tm_apid": 259,
+      "tc_reference_apid": 16,
+      "openobsw_contract_route_apid_policy": {
+        "kind": "wildcard",
+        "value": 65535
+      },
+      "tm_layout": {
+        "openobsw_secondary_header_bytes": 11,
+        "obsw_srdb_primary_header_bits": 48,
+        "obsw_srdb_application_data_start_bit": 136
+      },
+      "event_severity_subtypes": {
+        "INFO": 1,
+        "LOW": 2,
+        "MEDIUM": 3,
+        "HIGH": 4
+      }
+    },
+    "exact_message_capabilities": [
+      {"direction": "TC", "service": 17, "subtype": 1},
+      {"direction": "TM", "service": 1, "subtype": 1},
+      {"direction": "TM", "service": 1, "subtype": 7},
+      {"direction": "TM", "service": 17, "subtype": 2},
+      {"direction": "TM", "service": 3, "subtype": 25},
+      {"direction": "TM", "service": 5, "subtype": 3}
+    ],
+    "occupied_allocations": {
+      "parameters": [
+        {"id": 1, "name": "obc_temperature"},
+        {"id": 2, "name": "obc_voltage_3v3"},
+        {"id": 3, "name": "obc_voltage_5v"},
+        {"id": 4, "name": "obc_uptime"},
+        {"id": 5, "name": "safe_mode_entry_count"},
+        {"id": 6, "name": "watchdog_kick_count"},
+        {"id": 7, "name": "watchdog_ticks_remaining"},
+        {"id": 8352, "name": "bdot_gain"},
+        {"id": 8353, "name": "adcs_kp"},
+        {"id": 8354, "name": "adcs_kd"},
+        {"id": 16385, "name": "obc_mode"},
+        {"id": 16387, "name": "obc_obt"},
+        {"id": 16388, "name": "obc_watchdog_status"},
+        {"id": 16390, "name": "obc_memory_used_pct"},
+        {"id": 16392, "name": "obc_health"},
+        {"id": 16393, "name": "obc_reset_count"},
+        {"id": 16394, "name": "obc_cpu_load"}
+      ],
+      "events": [
+        {"id": 1, "name": "boot_complete"},
+        {"id": 2, "name": "safe_mode_entry"},
+        {"id": 3, "name": "safe_mode_exit"},
+        {"id": 4, "name": "standby_entry"},
+        {"id": 5, "name": "nominal_entry"},
+        {"id": 16, "name": "watchdog_expiry"},
+        {"id": 32, "name": "power_fault_3v3"},
+        {"id": 33, "name": "power_fault_5v"},
+        {"id": 48, "name": "comms_timeout"},
+        {"id": 64, "name": "hk_store_full"},
+        {"id": 80, "name": "temperature_soft_limit"},
+        {"id": 81, "name": "temperature_hard_limit"}
+      ],
+      "hk_sets": [
+        {"sid": 1, "name": "nominal_hk"},
+        {"sid": 2, "name": "fdir_hk"},
+        {"sid": 3, "name": "dhs_obc_hk"},
+        {"sid": 4, "name": "aocs_hk"}
+      ],
+      "telecommands": [
+        {
+          "name": "are_you_alive",
+          "apid": 16,
+          "service": 17,
+          "subtype": 1,
+          "parameters": []
+        },
+        {
+          "name": "enable_hk_report",
+          "apid": 16,
+          "service": 3,
+          "subtype": 5,
+          "parameters": [
+            {"name": "set_id", "type": "uint8"},
+            {"name": "interval_ticks", "type": "uint32"}
+          ]
+        },
+        {
+          "name": "disable_hk_report",
+          "apid": 16,
+          "service": 3,
+          "subtype": 6,
+          "parameters": [
+            {"name": "set_id", "type": "uint8"}
+          ]
+        },
+        {
+          "name": "s8_perform_function",
+          "apid": 16,
+          "service": 8,
+          "subtype": 1,
+          "parameters": [
+            {"name": "function_id", "type": "uint16"},
+            {"name": "args_len", "type": "uint8"}
+          ]
+        }
+      ]
+    }
+  },
+  "adapter_projection_rules": {
+    "core_scalar_to_obsw_srdb": {
+      "uint8": {"type": "uint8", "ptc": 1, "pfc": 8},
+      "uint16": {"type": "uint16", "ptc": 1, "pfc": 16},
+      "uint32": {"type": "uint32", "ptc": 1, "pfc": 32},
+      "int8": {"type": "int8", "ptc": 2, "pfc": 8},
+      "int16": {"type": "int16", "ptc": 2, "pfc": 16},
+      "int32": {"type": "int32", "ptc": 2, "pfc": 32},
+      "float32": {"type": "float32", "ptc": 5, "pfc": 1}
+    },
+    "telemetry_limit_mapping": {
+      "warning_low": "soft_low",
+      "warning_high": "soft_high",
+      "critical_low": "hard_low",
+      "critical_high": "hard_high"
+    },
+    "new_hk_default_interval_ticks": 0,
+    "new_event_safe_trigger": false,
+    "target_name_policy": "core_id_to_snake_case"
+  },
+  "provenance": {
+    "design_resource_git_blob": "16fbe5eaf50ca0ffd462f016b4c58d9256aca738",
+    "openobsw_commit": "b3b7c3fa9c6edd2a52eef356d113c1eae1b03fec",
+    "opensvf_commit": "667d3eadcb0bbd7814ac324b99946c4ed2f11f23"
+  }
+}
