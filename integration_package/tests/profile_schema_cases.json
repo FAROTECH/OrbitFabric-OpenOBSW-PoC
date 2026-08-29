@@ -1,0 +1,647 @@
+{
+  "cases": [
+    {
+      "name": "valid_reference_profile",
+      "expected_valid": true,
+      "mutations": []
+    },
+    {
+      "name": "reject_wrong_integration_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["integration", "id"],
+          "value": "wrong"
+        }
+      ]
+    },
+    {
+      "name": "reject_missing_target_baseline",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["settings", "compatibility", "target_baseline"]
+        }
+      ]
+    },
+    {
+      "name": "reject_empty_target_baseline",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["settings", "compatibility", "target_baseline"],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "reject_core_semantic_unit_override",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config", "unit"],
+          "value": "mV"
+        }
+      ]
+    },
+    {
+      "name": "reject_legacy_numeric_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config", "numeric_id"],
+          "value": 16385
+        }
+      ]
+    },
+    {
+      "name": "reject_legacy_srdb_name",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 2, "config", "srdb_name"],
+          "value": "dhs.obc.ping"
+        }
+      ]
+    },
+    {
+      "name": "reject_legacy_c_type_override",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config", "c_type_override"],
+          "value": "uint16_t"
+        }
+      ]
+    },
+    {
+      "name": "reject_reserved_tm_apid",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["settings", "pus", "tm_apid"],
+          "value": 2047
+        }
+      ]
+    },
+    {
+      "name": "reject_reserved_tc_apid",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["settings", "pus", "tc_apid"],
+          "value": 2047
+        }
+      ]
+    },
+    {
+      "name": "reject_telemetry_without_parameter_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["bindings", 0, "config", "obsw_srdb", "parameter_id"]
+        }
+      ]
+    },
+    {
+      "name": "reject_zero_parameter_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config", "obsw_srdb", "parameter_id"],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "reject_parameter_id_out_of_range",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config", "obsw_srdb", "parameter_id"],
+          "value": 65536
+        }
+      ]
+    },
+    {
+      "name": "reject_pus_on_telemetry",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config", "pus"],
+          "value": {
+            "service": 3,
+            "subtype": 25
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_packet_without_hk_set",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["bindings", 1, "config", "obsw_srdb", "hk_set"]
+        }
+      ]
+    },
+    {
+      "name": "reject_zero_hk_sid",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 1, "config", "obsw_srdb", "hk_set", "sid"],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "reject_hk_sid_out_of_range",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 1, "config", "obsw_srdb", "hk_set", "sid"],
+          "value": 256
+        }
+      ]
+    },
+    {
+      "name": "reject_empty_hk_fields",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 1, "config", "obsw_srdb", "hk_set", "fields"],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "reject_non_telemetry_hk_field",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 1, "config", "obsw_srdb", "hk_set", "fields", 0, "domain"],
+          "value": "events"
+        }
+      ]
+    },
+    {
+      "name": "reject_unprojected_hk_field",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 1, "config", "obsw_srdb", "hk_set", "fields", 0, "id"],
+          "value": "eps.other"
+        }
+      ]
+    },
+    {
+      "name": "reject_pus_on_packet",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 1, "config", "pus"],
+          "value": {
+            "service": 3,
+            "subtype": 25
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_command_without_pus",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["bindings", 2, "config", "pus"]
+        }
+      ]
+    },
+    {
+      "name": "reject_command_without_command_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["bindings", 2, "config", "flight_contract", "command_id"]
+        }
+      ]
+    },
+    {
+      "name": "reject_zero_command_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 2, "config", "flight_contract", "command_id"],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "accept_command_id_independent_from_pus_encoding",
+      "expected_valid": true,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 2, "config", "flight_contract", "command_id"],
+          "value": 28929
+        }
+      ]
+    },
+    {
+      "name": "reject_obsw_srdb_on_command",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 2, "config", "obsw_srdb"],
+          "value": {
+            "parameter_id": 24578
+          }
+        }
+      ]
+    },
+    {
+      "name": "accept_command_apid_override",
+      "expected_valid": true,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 2, "config", "pus", "apid"],
+          "value": 17
+        }
+      ]
+    },
+    {
+      "name": "reject_reserved_command_apid_override",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 2, "config", "pus", "apid"],
+          "value": 2047
+        }
+      ]
+    },
+    {
+      "name": "reject_event_without_event_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["bindings", 3, "config", "obsw_srdb", "event_id"]
+        }
+      ]
+    },
+    {
+      "name": "reject_zero_event_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config", "obsw_srdb", "event_id"],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "reject_pus_on_event",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config", "pus"],
+          "value": {
+            "service": 5,
+            "subtype": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_expected_responses_on_non_command",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config", "expected_responses"],
+          "value": [
+            {
+              "service": 1,
+              "subtype": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reject_missing_c_symbol",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["bindings", 0, "config", "flight_contract", "c_symbol"]
+        }
+      ]
+    },
+    {
+      "name": "reject_unknown_source_domain",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "sources", 0, "domain"],
+          "value": "faults"
+        }
+      ]
+    },
+    {
+      "name": "reject_multi_source_binding",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "sources"],
+          "value": [
+            {
+              "domain": "telemetry",
+              "id": "eps.obc.bus_voltage_mv"
+            },
+            {
+              "domain": "telemetry",
+              "id": "eps.other"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "accept_do_not_project_with_reason",
+      "expected_valid": true,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "intent"],
+          "value": "do_not_project"
+        },
+        {
+          "op": "delete",
+          "path": ["bindings", 3, "config"]
+        },
+        {
+          "op": "set",
+          "path": ["bindings", 3, "reason"],
+          "value": "Not projected"
+        }
+      ]
+    },
+    {
+      "name": "reject_do_not_project_without_reason",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "intent"],
+          "value": "do_not_project"
+        },
+        {
+          "op": "delete",
+          "path": ["bindings", 3, "config"]
+        }
+      ]
+    },
+    {
+      "name": "reject_duplicate_binding_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "id"],
+          "value": "tm.obc_bus_voltage"
+        }
+      ]
+    },
+    {
+      "name": "reject_duplicate_c_symbol",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config", "flight_contract", "c_symbol"],
+          "value": "OF_TM_OBC_BUS_VOLTAGE_MV"
+        }
+      ]
+    },
+    {
+      "name": "reject_duplicate_parameter_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "sources"],
+          "value": [
+            {
+              "domain": "telemetry",
+              "id": "eps.synthetic"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config"],
+          "value": {
+            "flight_contract": {
+              "c_symbol": "OF_TM_SYNTH"
+            },
+            "obsw_srdb": {
+              "parameter_id": 24577
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_duplicate_command_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "sources"],
+          "value": [
+            {
+              "domain": "commands",
+              "id": "obc.synthetic"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config"],
+          "value": {
+            "flight_contract": {
+              "c_symbol": "OF_CMD_SYNTH",
+              "command_id": 5889
+            },
+            "pus": {
+              "service": 8,
+              "subtype": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_duplicate_event_id",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 0, "sources"],
+          "value": [
+            {
+              "domain": "events",
+              "id": "eps.synthetic"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": ["bindings", 0, "config"],
+          "value": {
+            "flight_contract": {
+              "c_symbol": "OF_EVENT_SYNTH"
+            },
+            "obsw_srdb": {
+              "event_id": 20481
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_duplicate_hk_sid",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "sources"],
+          "value": [
+            {
+              "domain": "packets",
+              "id": "synthetic_hk"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config"],
+          "value": {
+            "flight_contract": {
+              "c_symbol": "OF_HK_SYNTH"
+            },
+            "obsw_srdb": {
+              "hk_set": {
+                "sid": 5,
+                "fields": [
+                  {
+                    "domain": "telemetry",
+                    "id": "eps.obc.bus_voltage_mv"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_duplicate_tc_tuple",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "sources"],
+          "value": [
+            {
+              "domain": "commands",
+              "id": "obc.synthetic"
+            }
+          ]
+        },
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config"],
+          "value": {
+            "flight_contract": {
+              "c_symbol": "OF_CMD_SYNTH",
+              "command_id": 5890
+            },
+            "pus": {
+              "service": 17,
+              "subtype": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_non_monotonic_severity_map",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["settings", "obsw_srdb", "event_severity_map"],
+          "value": {
+            "info": "MEDIUM",
+            "warning": "LOW",
+            "error": "HIGH",
+            "critical": "HIGH"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_incomplete_severity_map",
+      "expected_valid": false,
+      "mutations": [
+        {
+          "op": "delete",
+          "path": ["settings", "obsw_srdb", "event_severity_map", "warning"]
+        }
+      ]
+    },
+    {
+      "name": "accept_same_number_across_distinct_namespaces",
+      "expected_valid": true,
+      "mutations": [
+        {
+          "op": "set",
+          "path": ["bindings", 3, "config", "obsw_srdb", "event_id"],
+          "value": 24577
+        }
+      ]
+    }
+  ]
+}
