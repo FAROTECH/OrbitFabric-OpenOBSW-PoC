@@ -27,7 +27,42 @@ def unavailable_input(reason: str, *, profile: bool = False) -> dict[str, Any]:
     }
 
 
+def _not_generated_artifacts(reason: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "flight.mission_contract",
+            "kind": "openobsw.mission_contract_header",
+            "requirement": "required",
+            "status": "not_generated",
+            "path": None,
+            "media_type": "text/x-c",
+            "sha256": None,
+            "reason": reason,
+            "retained_partial": False,
+            "derived_from_mappings": [],
+        },
+        {
+            "id": "ground.obsw_srdb_contribution",
+            "kind": "obsw_srdb.contribution_bundle",
+            "requirement": "required",
+            "status": "not_generated",
+            "path": None,
+            "media_type": "application/json",
+            "sha256": None,
+            "reason": reason,
+            "retained_partial": False,
+            "derived_from_mappings": [],
+        },
+    ]
+
+
 def failed_result(operation: str, failure: AdapterFailure) -> dict[str, Any]:
+    artifact_phase = failure.phase == "artifact_generation"
+    capabilities = (
+        ["profile_validation", "projection", "artifact_generation", "traceability"]
+        if artifact_phase
+        else []
+    )
     return {
         "kind": "orbitfabric.integration_result",
         "result_version": RESULT_VERSION,
@@ -48,8 +83,8 @@ def failed_result(operation: str, failure: AdapterFailure) -> dict[str, Any]:
                 profile=True,
             ),
         },
-        "capabilities": [],
-        "artifacts": [],
+        "capabilities": capabilities,
+        "artifacts": _not_generated_artifacts(failure.message) if artifact_phase else [],
         "mappings": [],
         "resolutions": [],
         "diagnostics": [failure.as_diagnostic()],
