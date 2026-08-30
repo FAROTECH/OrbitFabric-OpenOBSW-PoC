@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .artifacts import generate_project_artifacts
 from .baseline import load_target_baseline
 from .core_input import CoreInputSet, load_core_input_set
 from .coverage import build_coverage
@@ -16,7 +17,12 @@ def _success_result(
     profile: ProjectionProfile,
     mappings: list[dict[str, Any]],
     resolutions: list[dict[str, Any]],
+    artifacts: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    capabilities = ["profile_validation", "projection"]
+    if artifacts:
+        capabilities.append("artifact_generation")
+    capabilities.append("traceability")
     return {
         "kind": "orbitfabric.integration_result",
         "result_version": RESULT_VERSION,
@@ -48,8 +54,8 @@ def _success_result(
                 "reason": None,
             },
         },
-        "capabilities": ["profile_validation", "projection", "traceability"],
-        "artifacts": [],
+        "capabilities": capabilities,
+        "artifacts": artifacts,
         "mappings": mappings,
         "resolutions": resolutions,
         "diagnostics": [],
@@ -64,6 +70,7 @@ def run_project(
     profile_path: Path,
     *,
     schema_path: Path | None = None,
+    output_dir: Path | None = None,
 ) -> dict[str, Any]:
     core = load_core_input_set(input_set_manifest)
     profile_kwargs = {"schema_path": schema_path} if schema_path is not None else {}
@@ -72,4 +79,15 @@ def run_project(
     baseline_id = profile.document["settings"]["compatibility"]["target_baseline"]
     baseline = load_target_baseline(baseline_id)
     mappings, resolutions = resolve_projection(core, profile, baseline, resolved)
-    return _success_result(core, profile, mappings, resolutions)
+    artifacts: list[dict[str, Any]] = []
+    if output_dir is not None:
+        artifacts = generate_project_artifacts(
+            output_dir,
+            core,
+            profile,
+            baseline,
+            resolved,
+            mappings,
+            resolutions,
+        )
+    return _success_result(core, profile, mappings, resolutions, artifacts)

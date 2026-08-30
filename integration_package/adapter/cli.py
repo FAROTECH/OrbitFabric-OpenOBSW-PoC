@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from .artifacts import reset_project_outputs
 from .model import AdapterFailure
 from .preflight import run_project
 from .result import failed_result, write_result
@@ -25,6 +26,12 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = Path(args.output_dir)
     operation = args.operation
 
+    try:
+        reset_project_outputs(output_dir)
+    except (AdapterFailure, OSError) as exc:
+        print(f"Adapter output reset failure: {exc}", file=sys.stderr)
+        return 1
+
     if operation != "project":
         failure = AdapterFailure(
             "OFI-OPERATION-001",
@@ -39,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = run_project(
             Path(args.input_set_manifest),
             Path(args.profile),
+            output_dir=output_dir,
         )
         result_path = write_result(output_dir, payload)
     except AdapterFailure as exc:

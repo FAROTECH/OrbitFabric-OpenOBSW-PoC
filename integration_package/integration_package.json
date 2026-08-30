@@ -1,0 +1,99 @@
+{
+  "kind": "orbitfabric.integration_package",
+  "package_version": "0.1-candidate",
+  "integration": {
+    "id": "orbitfabric-openobsw-opensvf",
+    "schema_version": "0.1-candidate"
+  },
+  "adapter": {
+    "id": "orbitfabric-openobsw-opensvf",
+    "version": "0.1.0-dev.2",
+    "protocol": "orbitfabric.adapter_cli.v0",
+    "argv_prefix": [
+      "python3",
+      "integration_package/adapter_cli.py"
+    ]
+  },
+  "profile_schemas": [
+    {
+      "schema_version": "0.1-candidate",
+      "format": "json-schema-2020-12",
+      "path": "schemas/profile-0.1.schema.json",
+      "sha256": "92bc5089b9cf88e1f48cb0ea61acb9a4f84d514918ecacf5839abd59fa51c199"
+    }
+  ],
+  "input_contracts": [
+    {
+      "kind": "orbitfabric.integration_input_set",
+      "versions": [
+        "0.1-candidate"
+      ],
+      "surfaces": [
+        {
+          "role": "entity_index",
+          "kind": "orbitfabric.entity_index",
+          "versions": [
+            "0.1"
+          ],
+          "requirement": "required"
+        },
+        {
+          "role": "lint_report",
+          "kind": "orbitfabric-lint",
+          "versions": [
+            "v1"
+          ],
+          "requirement": "required"
+        },
+        {
+          "role": "mission_snapshot",
+          "kind": "orbitfabric.mission_snapshot",
+          "versions": [
+            "0.1-candidate"
+          ],
+          "requirement": "required"
+        },
+        {
+          "role": "relationship_manifest",
+          "kind": "orbitfabric.relationship_manifest",
+          "versions": [
+            "0.1-candidate"
+          ],
+          "requirement": "required"
+        },
+        {
+          "role": "model_summary",
+          "kind": "orbitfabric.model_summary",
+          "versions": [
+            "0.1"
+          ],
+          "requirement": "companion"
+        }
+      ]
+    }
+  ],
+  "result_contracts": [
+    {
+      "kind": "orbitfabric.integration_result",
+      "versions": [
+        "0.1-candidate"
+      ],
+      "default_version": "0.1-candidate"
+    }
+  ],
+  "operations": [
+    {
+      "id": "project",
+      "capabilities": [
+        "profile_validation",
+        "projection",
+        "artifact_generation",
+        "traceability"
+      ],
+      "result_contract": {
+        "kind": "orbitfabric.integration_result",
+        "version": "0.1-candidate"
+      }
+    }
+  ]
+}
