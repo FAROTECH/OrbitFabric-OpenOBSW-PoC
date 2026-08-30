@@ -1,6 +1,6 @@
 # Stage 7.5 — Target-owned SRDB composition handoff
 
-Status: candidate reference implementation pending real-workspace acceptance
+Status: consolidated against merged upstream OpenOBSW baseline
 
 ## Purpose
 
@@ -51,21 +51,16 @@ Integration Results
 Studio
 ```
 
-## Reference OpenOBSW branch
+## Reference OpenOBSW baseline
 
-The candidate target-owned implementation is developed on:
+The target-owned composition and external SRDB build-input capability is now merged upstream in OpenOBSW.
 
-```text
-FAROTECH/openobsw
-branch: orbitfabric/srdb-additive-composition
-base:   b3b7c3fa9c6edd2a52eef356d113c1eae1b03fec
-```
+Canonical merged baseline:
 
-Reference head for the first acceptance campaign:
+lipofefeyt/openobsw
+main: 44ceb71a016f0541ff7a0aa74191e13bafdb59c1
 
-```text
-8e9181ee056874a4bc056a6a1de74549d9a5dfdd
-```
+This merged baseline is now the canonical target reference for the downstream Stage 7 acceptance campaign.
 
 It adds:
 

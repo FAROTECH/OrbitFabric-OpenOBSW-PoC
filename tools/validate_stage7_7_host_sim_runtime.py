@@ -11,7 +11,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-EXPECTED_OPENOBSW_HOST_SIM_COMMIT = "d6ec4b47b62733aec0f73f491a5453e6865c9b03"
+EXPECTED_OPENOBSW_HOST_SIM_COMMIT = "44ceb71a016f0541ff7a0aa74191e13bafdb59c1"
 _REQUIRED_SRDB_FILES = (
     "spacecraft.yaml",
     "parameters.yaml",

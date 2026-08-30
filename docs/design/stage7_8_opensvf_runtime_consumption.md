@@ -11,7 +11,7 @@ This stage must not add OrbitFabric-specific behavior to OpenSVF.
 ## Reference baselines
 
 - OpenOBSW build/runtime reference:
-  `d6ec4b47b62733aec0f73f491a5453e6865c9b03`
+  `44ceb71a016f0541ff7a0aa74191e13bafdb59c1`
 - OpenSVF reference:
   `667d3eadcb0bbd7814ac324b99946c4ed2f11f23`
 

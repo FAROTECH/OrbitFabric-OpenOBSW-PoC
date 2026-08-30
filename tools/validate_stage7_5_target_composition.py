@@ -10,7 +10,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-EXPECTED_OPENOBSW_COMPOSITION_COMMIT = "8e9181ee056874a4bc056a6a1de74549d9a5dfdd"
+EXPECTED_OPENOBSW_COMPOSITION_COMMIT = "44ceb71a016f0541ff7a0aa74191e13bafdb59c1"
 _XTCE_NS = "http://www.omg.org/space/xtce"
 
 
