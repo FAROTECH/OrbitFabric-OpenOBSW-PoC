@@ -7,9 +7,11 @@ import argparse
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 EXPECTED_OPENOBSW_COMPOSITION_COMMIT = "8e9181ee056874a4bc056a6a1de74549d9a5dfdd"
+_XTCE_NS = "http://www.omg.org/space/xtce"
 
 
 def _git_head(repo: Path) -> str:
@@ -73,6 +75,26 @@ int main(void) {
                 + completed.stdout
                 + completed.stderr
             )
+
+
+def _validate_xtce(xtce: str) -> None:
+    root = ET.fromstring(xtce)
+    parameter_names = {
+        item.get("name")
+        for item in root.findall(f".//{{{_XTCE_NS}}}Parameter")
+    }
+    container_names = {
+        item.get("name")
+        for item in root.findall(f".//{{{_XTCE_NS}}}SequenceContainer")
+    }
+    parameter_refs = {
+        item.get("parameterRef")
+        for item in root.findall(f".//{{{_XTCE_NS}}}ParameterRefEntry")
+    }
+
+    assert "EPS_OBC_BUS_VOLTAGE_MV" in parameter_names
+    assert "TM_3_25_OBC_HK" in container_names
+    assert "EPS_OBC_BUS_VOLTAGE_MV" in parameter_refs
 
 
 def main() -> int:
@@ -151,8 +173,7 @@ def main() -> int:
     _compile_generated_header(header)
 
     xtce = generate_xtce(composed)
-    assert "eps_obc_bus_voltage_mv" in xtce
-    assert "TM_3_25_HK" in xtce
+    _validate_xtce(xtce)
 
     print("Stage 7.5 target composition acceptance: PASS")
     print(f"  bundle: {bundle}")
