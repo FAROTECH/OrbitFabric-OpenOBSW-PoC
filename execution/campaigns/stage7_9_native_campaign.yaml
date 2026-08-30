@@ -1,0 +1,8 @@
+campaign: OrbitFabric Stage 7.9 Native OpenSVF Verification
+spacecraft: ../opensvf/stage7_9_spacecraft.yaml
+
+requirements:
+  - POC-S79-001
+
+procedures:
+  - ../procedures/stage7_9_ping_procedure.py
