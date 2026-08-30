@@ -146,7 +146,8 @@ def _validate_c11(bundle: Path) -> None:
 int main(void) {
     of_hk_obc_hk_t hk = {0};
     hk.eps_obc_bus_voltage_mv = 0u;
-    return (OF_TM_OBC_BUS_VOLTAGE_MV == 0x6001 &&
+    return (hk.eps_obc_bus_voltage_mv == 0u &&
+            OF_TM_OBC_BUS_VOLTAGE_MV == 0x6001 &&
             OF_CMD_PING == 0x1701 &&
             OF_EVENT_VOLTAGE_OUT_OF_BOUNDS == 0x5001 &&
             OF_HK_SET_OBC == 0x0005 &&
