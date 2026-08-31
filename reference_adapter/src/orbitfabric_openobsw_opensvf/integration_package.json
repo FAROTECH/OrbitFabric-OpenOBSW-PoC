@@ -1,0 +1,75 @@
+{
+  "kind": "orbitfabric.integration_package",
+  "manifest_version": "0.1-candidate",
+  "integration": {
+    "id": "orbitfabric-openobsw-opensvf"
+  },
+  "adapter": {
+    "id": "orbitfabric-openobsw-opensvf",
+    "version": "0.1.0.dev0"
+  },
+  "core_input_compatibility": {
+    "input_set_versions": [
+      "0.1-candidate"
+    ],
+    "surfaces": [
+      {
+        "role": "mission_snapshot",
+        "kind": "orbitfabric.mission_snapshot",
+        "format_versions": ["0.1-candidate"]
+      },
+      {
+        "role": "entity_index",
+        "kind": "orbitfabric.entity_index",
+        "format_versions": ["0.1"]
+      },
+      {
+        "role": "relationship_manifest",
+        "kind": "orbitfabric.relationship_manifest",
+        "format_versions": ["0.1-candidate"]
+      },
+      {
+        "role": "lint_report",
+        "kind": "orbitfabric-lint",
+        "format_versions": ["v1"]
+      }
+    ],
+    "relationship_families": []
+  },
+  "profile_compatibility": {
+    "profile_versions": ["0.1-candidate"]
+  },
+  "result_compatibility": {
+    "result_versions": ["0.1-candidate"],
+    "default_result_version": "0.1-candidate"
+  },
+  "capabilities": [
+    "profile_validation",
+    "projection",
+    "artifact_generation",
+    "traceability"
+  ],
+  "operations": [
+    {
+      "id": "project",
+      "capabilities": [
+        "profile_validation",
+        "projection",
+        "artifact_generation",
+        "traceability"
+      ]
+    }
+  ],
+  "profile_schemas": [
+    {
+      "schema_version": "0.1-candidate",
+      "format": "json-schema-2020-12",
+      "path": "schemas/openobsw_opensvf_projection_profile_v0.schema.json",
+      "sha256": "7ac79dee05750502a6634271d8c31284d781f73198d9270a31c50a50be545e25"
+    }
+  ],
+  "execution": {
+    "protocol": "orbitfabric.adapter_cli.v0",
+    "argv_prefix": ["orbitfabric-openobsw-opensvf"]
+  }
+}
