@@ -1,0 +1,329 @@
+{
+  "kind": "orbitfabric.stage7_10_projection_cases",
+  "version": "0.1-candidate",
+  "cases": [
+    {
+      "id": "VP-001",
+      "title": "Mapped ping command projects to one PUS TC and three Profile obligations",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "command",
+            "t": 5,
+            "domain": "commands",
+            "id": "obc.ping",
+            "args": {}
+          }
+        ],
+        "profile_binding": "cmd.ping"
+      },
+      "expected": {
+        "status": "executable_subset",
+        "command_disposition": "projected",
+        "target_operations": [
+          {
+            "operation": "pus_tc",
+            "origin": "profile_mapping",
+            "apid": 16,
+            "service": 17,
+            "subtype": 1
+          },
+          {
+            "operation": "expect_pus_tm",
+            "origin": "profile_expected_response",
+            "service": 1,
+            "subtype": 1
+          },
+          {
+            "operation": "expect_pus_tm",
+            "origin": "profile_expected_response",
+            "service": 17,
+            "subtype": 2
+          },
+          {
+            "operation": "expect_pus_tm",
+            "origin": "profile_expected_response",
+            "service": 1,
+            "subtype": 7
+          }
+        ],
+        "profile_verification_obligations": 3
+      }
+    },
+    {
+      "id": "VP-002",
+      "title": "Core command_status ACCEPTED is not inferred from PUS acceptance TM",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "command",
+            "t": 5,
+            "domain": "commands",
+            "id": "obc.ping",
+            "args": {}
+          },
+          {
+            "kind": "expect_command_status",
+            "t": 5,
+            "expected": "ACCEPTED"
+          }
+        ]
+      },
+      "expected": {
+        "status": "executable_subset",
+        "command_disposition": "projected",
+        "command_status_disposition": "not_projected",
+        "must_not_create_semantic_equivalence": "expect_command_status=ACCEPTED -> TM(1,1)"
+      }
+    },
+    {
+      "id": "VP-003",
+      "title": "Scenario time remains provenance only",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "command",
+            "t": 37,
+            "domain": "commands",
+            "id": "obc.ping",
+            "args": {}
+          }
+        ]
+      },
+      "expected": {
+        "status": "executable_subset",
+        "preserved_scenario_t": 37,
+        "must_not_emit_operations": [
+          "wait",
+          "schedule_tc",
+          "pus_service_11"
+        ]
+      }
+    },
+    {
+      "id": "VP-004",
+      "title": "Command arguments block projection until an explicit encoder exists",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "command",
+            "t": 5,
+            "domain": "commands",
+            "id": "obc.ping",
+            "args": {
+              "value": 1
+            }
+          }
+        ]
+      },
+      "expected": {
+        "status": "blocked",
+        "command_disposition": "blocked",
+        "diagnostic_code": "OFI-VPROJ-CMDARGS-001"
+      }
+    },
+    {
+      "id": "VP-005",
+      "title": "Selected command with no Profile binding fails closed",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "command",
+            "t": 5,
+            "domain": "commands",
+            "id": "payload.start_acquisition",
+            "args": {}
+          }
+        ],
+        "profile_binding": null
+      },
+      "expected": {
+        "status": "blocked",
+        "command_disposition": "blocked",
+        "diagnostic_code": "OFI-VPROJ-BINDING-001"
+      }
+    },
+    {
+      "id": "VP-006",
+      "title": "Explicit do_not_project command binding cannot become executable",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "command",
+            "t": 5,
+            "domain": "commands",
+            "id": "obc.ping",
+            "args": {}
+          }
+        ],
+        "profile_intent": "do_not_project"
+      },
+      "expected": {
+        "status": "blocked",
+        "command_disposition": "blocked",
+        "diagnostic_code": "OFI-VPROJ-INTENT-001"
+      }
+    },
+    {
+      "id": "VP-007",
+      "title": "Initial state is explicitly outside the v0 executable subset",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "initial_mode",
+            "value": "NOMINAL"
+          },
+          {
+            "kind": "initial_telemetry",
+            "domain": "telemetry",
+            "id": "eps.obc.bus_voltage_mv",
+            "value": 7400
+          }
+        ]
+      },
+      "expected": {
+        "status": "executable_subset",
+        "disposition": "not_projected",
+        "reason_required": true
+      }
+    },
+    {
+      "id": "VP-008",
+      "title": "Telemetry expectation is not projected by ID or string similarity",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "expect_telemetry",
+            "t": 8,
+            "domain": "telemetry",
+            "id": "eps.obc.bus_voltage_mv",
+            "expected": 7400
+          }
+        ]
+      },
+      "expected": {
+        "status": "executable_subset",
+        "disposition": "not_projected",
+        "must_not_infer_opensvf_parameter_key": true
+      }
+    },
+    {
+      "id": "VP-009",
+      "title": "Event expectation is not projected from PUS subtype alone",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "expect_event",
+            "t": 9,
+            "domain": "events",
+            "id": "eps.voltage_out_of_bounds"
+          }
+        ]
+      },
+      "expected": {
+        "status": "executable_subset",
+        "disposition": "not_projected",
+        "must_not_use_pus_subtype_as_event_identity": true
+      }
+    },
+    {
+      "id": "VP-010",
+      "title": "Data-flow expectation remains host-side contract evidence",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "expect_data_flow",
+            "t": 9,
+            "data_product": "payload.radiation_histogram"
+          }
+        ]
+      },
+      "expected": {
+        "status": "executable_subset",
+        "disposition": "not_projected",
+        "must_not_create_runtime_downlink_or_contact_operations": true
+      }
+    },
+    {
+      "id": "VP-011",
+      "title": "Multiple executable command bindings are ambiguous and fail closed",
+      "input": {
+        "scenario_atoms": [
+          {
+            "kind": "command",
+            "t": 5,
+            "domain": "commands",
+            "id": "obc.ping",
+            "args": {}
+          }
+        ],
+        "matching_project_bindings": [
+          "cmd.ping",
+          "cmd.ping.alt"
+        ]
+      },
+      "expected": {
+        "status": "blocked",
+        "command_disposition": "blocked",
+        "diagnostic_code": "OFI-VPROJ-AMBIGUOUS-001"
+      }
+    },
+    {
+      "id": "VP-012",
+      "title": "Atom accounting reconciles exactly",
+      "input": {
+        "source_atoms": 12
+      },
+      "expected": {
+        "invariant": "source_atoms == projected_atoms + not_projected_atoms + blocked_atoms"
+      }
+    },
+    {
+      "id": "VP-013",
+      "title": "Blocked accounting determines blocked plan status",
+      "input": {
+        "blocked_atoms": 1
+      },
+      "expected": {
+        "status": "blocked",
+        "invariant": "blocked_atoms > 0 -> status == blocked"
+      }
+    },
+    {
+      "id": "VP-014",
+      "title": "No blocked atoms permits executable_subset only for resolved selected operations",
+      "input": {
+        "blocked_atoms": 0,
+        "selected_operations_fully_resolved": true
+      },
+      "expected": {
+        "status": "executable_subset",
+        "invariant": "status does not claim full scenario semantic equivalence"
+      }
+    },
+    {
+      "id": "VP-015",
+      "title": "Plan provenance records exact consumed input hashes",
+      "input": {
+        "scenario_sha256": "exact",
+        "input_set_sha256": "exact",
+        "profile_sha256": "exact"
+      },
+      "expected": {
+        "all_three_hashes_required": true,
+        "hash_algorithm": "SHA-256"
+      }
+    },
+    {
+      "id": "VP-016",
+      "title": "Projection plan is byte-deterministic for identical validated inputs",
+      "input": {
+        "same_validated_inputs": true
+      },
+      "expected": {
+        "byte_identical_output": true,
+        "canonical_writer_policy": "json.dumps(indent=2, sort_keys=True) + newline"
+      }
+    }
+  ]
+}
