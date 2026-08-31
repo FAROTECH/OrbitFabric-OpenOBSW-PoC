@@ -1,0 +1,590 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:orbitfabric:integration:openobsw-opensvf:verification-projection-plan:0.1-candidate",
+  "title": "OrbitFabric OpenOBSW/OpenSVF Verification Projection Plan",
+  "description": "PoC-owned resolved verification projection artifact for Stage 7.10. It records explicit disposition of OrbitFabric scenario semantic atoms, resolved target verification operations, and exact input provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "plan_version",
+    "status",
+    "source",
+    "core_input",
+    "profile",
+    "integration",
+    "accounting",
+    "atoms",
+    "operations",
+    "diagnostics"
+  ],
+  "properties": {
+    "kind": {
+      "const": "orbitfabric.verification_projection_plan"
+    },
+    "plan_version": {
+      "const": "0.1-candidate"
+    },
+    "status": {
+      "enum": [
+        "executable_subset",
+        "blocked"
+      ]
+    },
+    "source": {
+      "$ref": "#/$defs/source_provenance"
+    },
+    "core_input": {
+      "$ref": "#/$defs/core_input_provenance"
+    },
+    "profile": {
+      "$ref": "#/$defs/profile_provenance"
+    },
+    "integration": {
+      "$ref": "#/$defs/integration_provenance"
+    },
+    "accounting": {
+      "$ref": "#/$defs/accounting"
+    },
+    "atoms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/atom"
+      }
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nullable_nonempty": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_id",
+        "scenario_name",
+        "scenario_sha256",
+        "orbitfabric_version"
+      ],
+      "properties": {
+        "scenario_id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "scenario_name": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "scenario_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scenario_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "orbitfabric_version": {
+          "$ref": "#/$defs/nonempty"
+        }
+      }
+    },
+    "core_input_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "input_set_version",
+        "input_set_sha256",
+        "mission_id",
+        "model_version"
+      ],
+      "properties": {
+        "kind": {
+          "const": "orbitfabric.integration_input_set"
+        },
+        "input_set_version": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "input_set_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "mission_id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "model_version": {
+          "$ref": "#/$defs/nonempty"
+        }
+      }
+    },
+    "profile_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "profile_version",
+        "id",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "kind": {
+          "const": "orbitfabric.projection_profile"
+        },
+        "profile_version": {
+          "const": "0.1-candidate"
+        },
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "version": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "integration_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "schema_version",
+        "adapter"
+      ],
+      "properties": {
+        "id": {
+          "const": "orbitfabric-openobsw-opensvf"
+        },
+        "schema_version": {
+          "const": "0.1-candidate"
+        },
+        "adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "version"
+          ],
+          "properties": {
+            "id": {
+              "const": "orbitfabric-openobsw-opensvf"
+            },
+            "version": {
+              "$ref": "#/$defs/nonempty"
+            }
+          }
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_atoms",
+        "projected_atoms",
+        "not_projected_atoms",
+        "blocked_atoms",
+        "source_actions",
+        "source_expectations",
+        "projected_source_actions",
+        "projected_source_expectations",
+        "profile_verification_obligations"
+      ],
+      "properties": {
+        "source_atoms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projected_atoms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "not_projected_atoms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_atoms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_actions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_expectations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projected_source_actions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projected_source_expectations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "profile_verification_obligations": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "core_entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "id"
+      ],
+      "properties": {
+        "domain": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        }
+      }
+    },
+    "atom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "role",
+        "step_index",
+        "scenario_t",
+        "disposition",
+        "source",
+        "binding_id",
+        "operation_ids",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^atom-[0-9]{4}$"
+        },
+        "kind": {
+          "enum": [
+            "scenario_metadata",
+            "initial_mode",
+            "initial_telemetry",
+            "command",
+            "command_argument",
+            "telemetry_injection",
+            "expect_mode",
+            "expect_event",
+            "expect_command",
+            "expect_command_status",
+            "expect_telemetry",
+            "expect_payload_lifecycle",
+            "expect_data_flow",
+            "expect_scenario_status"
+          ]
+        },
+        "role": {
+          "enum": [
+            "metadata",
+            "initial_state",
+            "action",
+            "expectation"
+          ]
+        },
+        "step_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "scenario_t": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "projected",
+            "not_projected",
+            "blocked"
+          ]
+        },
+        "source": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/core_entity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binding_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "operation_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^op-[0-9]{4}$"
+          }
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "enum": [
+                  "not_projected",
+                  "blocked"
+                ]
+              }
+            },
+            "required": [
+              "disposition"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "const": "projected"
+              }
+            },
+            "required": [
+              "disposition"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "pus_tc_resolved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apid",
+        "service",
+        "subtype",
+        "data_hex"
+      ],
+      "properties": {
+        "apid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2046
+        },
+        "service": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "subtype": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "data_hex": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{2})*$"
+        }
+      }
+    },
+    "pus_tm_resolved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "service",
+        "subtype"
+      ],
+      "properties": {
+        "service": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "subtype": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    },
+    "operation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "order",
+            "operation",
+            "source_atom_id",
+            "binding_id",
+            "origin",
+            "resolved"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^op-[0-9]{4}$"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "operation": {
+              "const": "pus_tc"
+            },
+            "source_atom_id": {
+              "type": "string",
+              "pattern": "^atom-[0-9]{4}$"
+            },
+            "binding_id": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "origin": {
+              "const": "profile_mapping"
+            },
+            "resolved": {
+              "$ref": "#/$defs/pus_tc_resolved"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "order",
+            "operation",
+            "source_atom_id",
+            "binding_id",
+            "origin",
+            "resolved"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^op-[0-9]{4}$"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "operation": {
+              "const": "expect_pus_tm"
+            },
+            "source_atom_id": {
+              "type": "string",
+              "pattern": "^atom-[0-9]{4}$"
+            },
+            "binding_id": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "origin": {
+              "const": "profile_expected_response"
+            },
+            "resolved": {
+              "$ref": "#/$defs/pus_tm_resolved"
+            }
+          }
+        }
+      ]
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "owner",
+        "producer",
+        "phase",
+        "severity",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "owner": {
+          "const": "integration"
+        },
+        "producer": {
+          "const": "orbitfabric-openobsw-opensvf"
+        },
+        "phase": {
+          "const": "verification_projection"
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING",
+            "ERROR"
+          ]
+        },
+        "code": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "message": {
+          "$ref": "#/$defs/nonempty"
+        }
+      }
+    }
+  }
+}
