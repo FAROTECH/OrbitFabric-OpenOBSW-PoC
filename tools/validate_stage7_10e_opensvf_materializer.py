@@ -184,6 +184,20 @@ def main() -> int:
             == (first / SPACECRAFT_REL).read_bytes()
         )
 
+        materialized_spacecraft = first / SPACECRAFT_REL
+        spacecraft_payload = json.loads(
+            json.dumps(
+                __import__("yaml").safe_load(
+                    materialized_spacecraft.read_text(encoding="utf-8")
+                )
+            )
+        )
+        runtime_binary = spacecraft_payload["obsw"]["binary"]
+        assert runtime_binary == "../bin/obsw_sim"
+        assert (
+            materialized_spacecraft.parent / runtime_binary
+        ).resolve() == (first / "bin" / "obsw_sim").resolve()
+
         runner = CampaignRunner.from_yaml(first / CAMPAIGN_REL)
         procedures = runner._procedures
         assert len(procedures) == 1
@@ -232,6 +246,7 @@ def main() -> int:
     print("  executable_subset gate PASS")
     print("  deterministic OpenSVF bundle materialization PASS")
     print("  spacecraft template byte-copy PASS")
+    print("  spacecraft runtime binary path resolves inside bundle PASS")
     print("  plan APID 0x010 -> generated ctx.tc APID 0x010 PASS")
     print("  plan TC(17,1) -> generated ctx.tc PASS")
     print("  3 plan TM obligations -> generated ctx.expect_tm PASS")

@@ -176,14 +176,16 @@ The reference template keeps the established pipe runtime arrangement:
 
 ```text
 obsw.type = pipe
-obsw.binary = ../../bin/obsw_sim
+obsw.binary = ../bin/obsw_sim
 simulation.dt = 0.1
 simulation.stop_time = 10.0
 simulation.realtime = true
 ```
 
 The next runtime stage will place the built OpenOBSW host simulator in the
-bundle `bin` directory.
+bundle `bin` directory. Because the spacecraft file is materialized at
+`bundle/opensvf/spacecraft.yaml`, the relative runtime path is
+`../bin/obsw_sim`.
 
 ## Campaign metadata
 

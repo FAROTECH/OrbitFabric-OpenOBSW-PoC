@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import yaml
+
 from integration_package.adapter.model import AdapterFailure
 from integration_package.adapter.opensvf_materializer import (
     CAMPAIGN_REL,
@@ -140,7 +142,7 @@ def _write_inputs(root: Path, plan: dict | None = None) -> tuple[Path, Path]:
         "spacecraft: Stage7.10-Test\n"
         "obsw:\n"
         "  type: pipe\n"
-        "  binary: ../../bin/obsw_sim\n"
+        "  binary: ../bin/obsw_sim\n"
         "simulation:\n"
         "  dt: 0.1\n"
         "  stop_time: 10.0\n"
@@ -240,6 +242,21 @@ class OpenSVFMaterializerTests(unittest.TestCase):
                 spacecraft.read_bytes(),
                 (output / SPACECRAFT_REL).read_bytes(),
             )
+
+    def test_spacecraft_binary_path_resolves_inside_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plan, spacecraft = _write_inputs(root)
+            output = root / "bundle"
+            materialize_opensvf_plan(plan, spacecraft, output)
+
+            materialized = output / SPACECRAFT_REL
+            payload = yaml.safe_load(materialized.read_text(encoding="utf-8"))
+            binary = payload["obsw"]["binary"]
+            resolved = (materialized.parent / binary).resolve()
+
+            self.assertEqual(binary, "../bin/obsw_sim")
+            self.assertEqual(resolved, (output / "bin" / "obsw_sim").resolve())
 
     def test_operation_trace_maps_every_plan_operation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
