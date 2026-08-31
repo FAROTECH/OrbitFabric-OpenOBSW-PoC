@@ -1,0 +1,27 @@
+scenario:
+  id: stage7_10_ping_verification
+  name: Stage 7.10 ping verification
+  description: >
+    Minimal verification-projection scenario proving that the OrbitFabric
+    obc.ping action can be projected while Core host-side expectations remain
+    semantically distinct from target verification obligations.
+
+mission:
+  path: ../mission
+
+initial_state:
+  mode: NOMINAL
+  telemetry: {}
+
+steps:
+  - t: 5
+    command: obc.ping
+    expect:
+      command_status: ACCEPTED
+
+  - t: 6
+    expect_event: obc.ping_requested
+
+  - t: 7
+    expect:
+      scenario_status: PASSED
