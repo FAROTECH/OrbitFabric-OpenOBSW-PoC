@@ -1,0 +1,186 @@
+name: Architecture Lab Stage 7 v0 package convergence
+
+on:
+  push:
+    branches:
+      - architecture/stage7-v0-package-boundary-convergence
+  workflow_dispatch:
+
+jobs:
+  package-and-studio-v0:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Stage 7 convergence branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Checkout pinned OrbitFabric Core
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric
+          ref: b1aa95408710f697b0ee144a7b41f2376395e01f
+          path: .work/orbitfabric-core
+
+      - name: Install pinned Core, Stage 7 test requirements and package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./.work/orbitfabric-core
+          python -m pip install -r requirements-stage7.txt
+          python -m pip install -e .
+
+      - name: Assert installed package resources and canonical v0 manifest
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import shutil
+          from importlib.resources import files
+          from pathlib import Path
+
+          import integration_package
+
+          root = files("integration_package")
+          manifest = root.joinpath("integration_package.json")
+          schema = root.joinpath("schemas/profile-0.1.schema.json")
+          baseline = root.joinpath(
+              "resources/target_baselines/openobsw-0.7.0-obsw-srdb-0.1.0-reference.json"
+          )
+          assert manifest.is_file(), manifest
+          assert schema.is_file(), schema
+          assert baseline.is_file(), baseline
+
+          payload = json.loads(manifest.read_text(encoding="utf-8"))
+          assert payload["kind"] == "orbitfabric.integration_package"
+          assert payload["manifest_version"] == "0.1-candidate"
+          assert payload["execution"]["protocol"] == "orbitfabric.adapter_cli.v0"
+          assert payload["execution"]["argv_prefix"] == ["orbitfabric-openobsw-opensvf"]
+          assert [item["id"] for item in payload["operations"]] == ["project"]
+          assert payload["result_compatibility"]["default_result_version"] == "0.1-candidate"
+
+          digest = hashlib.sha256(schema.read_bytes()).hexdigest()
+          assert digest == payload["profile_schemas"][0]["sha256"], (digest, payload["profile_schemas"][0]["sha256"])
+
+          executable = shutil.which("orbitfabric-openobsw-opensvf")
+          assert executable, "installed console entry point is unavailable"
+          print(f"installed package: {Path(integration_package.__file__).resolve()}")
+          print(f"installed executable: {executable}")
+          print(f"schema sha256: {digest}")
+          PY
+
+      - name: Run existing Stage 7 adapter test suite
+        run: python -m pytest integration_package/tests -q
+
+      - name: Export coherent Core Integration Input Set
+        run: |
+          mkdir -p /tmp/orbitfabric-stage7/input
+          orbitfabric export integration-input-set \
+            orbitfabric_models/mission \
+            --output-dir /tmp/orbitfabric-stage7/input
+
+      - name: Execute installed Stage 7 package through exact adapter_cli.v0 argv
+        run: |
+          rm -rf /tmp/orbitfabric-stage7/direct-result
+          orbitfabric-openobsw-opensvf run \
+            --operation project \
+            --input-set-manifest /tmp/orbitfabric-stage7/input/integration_input_manifest.json \
+            --profile "$GITHUB_WORKSPACE/projection_profiles/poc_openobsw_opensvf.yaml" \
+            --output-dir /tmp/orbitfabric-stage7/direct-result
+
+      - name: Assert direct v0 Result identity and provenance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('/tmp/orbitfabric-stage7/direct-result/integration_result.json')
+          payload = json.loads(path.read_text(encoding='utf-8'))
+          assert payload['kind'] == 'orbitfabric.integration_result'
+          assert payload['result_version'] == '0.1-candidate'
+          assert payload['result'] == 'succeeded'
+          assert payload['integration']['id'] == 'orbitfabric-openobsw-opensvf'
+          assert payload['adapter']['id'] == 'orbitfabric-openobsw-opensvf'
+          assert payload['adapter']['version'] == '0.1.0-dev.2'
+          assert payload['operation']['id'] == 'project'
+          assert payload['inputs']['core_input_set']['status'] == 'available'
+          assert payload['inputs']['profile']['status'] == 'available'
+          assert payload['coverage']['status'] == 'complete'
+          assert payload['artifacts']
+          print(path.read_text(encoding='utf-8'))
+          PY
+
+      - name: Checkout current OrbitFabric Studio consumer
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric-studio
+          path: .work/orbitfabric-studio
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Execute installed adapter through current Studio Rust v0 runner
+        env:
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_EXECUTABLE: orbitfabric-openobsw-opensvf
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_OUTPUT_DIR: /tmp/orbitfabric-stage7/studio-result
+        run: |
+          cargo test --locked \
+            --manifest-path .work/orbitfabric-studio/src-tauri/Cargo.toml \
+            external_adapter_acceptance_executes_through_studio_runner \
+            -- --nocapture
+
+      - name: Stage current Stage 7 package for Studio contract-consumer acceptance
+        run: |
+          fixture=/tmp/orbitfabric-stage7/studio-fixture
+          mkdir -p "$fixture/reference_adapter/src/orbitfabric_openobsw_opensvf/schemas"
+          mkdir -p "$fixture/orbitfabric_models/profiles"
+          cp integration_package/integration_package.json \
+            "$fixture/reference_adapter/src/orbitfabric_openobsw_opensvf/integration_package.json"
+          cp integration_package/schemas/profile-0.1.schema.json \
+            "$fixture/reference_adapter/src/orbitfabric_openobsw_opensvf/schemas/profile-0.1.schema.json"
+          cp projection_profiles/poc_openobsw_opensvf.yaml \
+            "$fixture/orbitfabric_models/profiles/openobsw_opensvf_poc_v0.yaml"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: .work/orbitfabric-studio/package-lock.json
+
+      - name: Install locked Studio dependencies
+        working-directory: .work/orbitfabric-studio
+        run: npm ci
+
+      - name: Consume Stage 7 manifest, Profile and Result through current Studio v0 contracts
+        working-directory: .work/orbitfabric-studio
+        env:
+          ORBITFABRIC_STUDIO_REFERENCE_POC: /tmp/orbitfabric-stage7/studio-fixture
+          ORBITFABRIC_STUDIO_REFERENCE_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          ORBITFABRIC_STUDIO_REFERENCE_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
+        run: npm run test:logic
+
+      - name: Retain convergence evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage7-v0-package-convergence
+          if-no-files-found: error
+          path: |
+            /tmp/orbitfabric-stage7/input
+            /tmp/orbitfabric-stage7/direct-result
+            /tmp/orbitfabric-stage7/studio-result
+            /tmp/orbitfabric-stage7/studio-fixture
