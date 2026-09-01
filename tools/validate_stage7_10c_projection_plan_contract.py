@@ -59,7 +59,7 @@ def _reference_plan() -> dict:
             "schema_version": "0.1-candidate",
             "adapter": {
                 "id": "orbitfabric-openobsw-opensvf",
-                "version": "0.1.0-dev.2",
+                "version": "0.1.0",
             },
         },
         "accounting": {
