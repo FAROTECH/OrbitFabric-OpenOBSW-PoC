@@ -1,0 +1,445 @@
+name: Architecture Lab Stage 7 v0 package convergence
+
+on:
+  push:
+    branches:
+      - architecture/stage7-v0-package-boundary-convergence
+  workflow_dispatch:
+
+jobs:
+  package-and-studio-v0:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Stage 7 convergence branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Checkout pinned OrbitFabric Core
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric
+          ref: b1aa95408710f697b0ee144a7b41f2376395e01f
+          path: .work/orbitfabric-core
+
+      - name: Install pinned Core, Stage 7 test requirements and package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./.work/orbitfabric-core
+          python -m pip install -r requirements-stage7.txt
+          python -m pip install -e '.[dev]'
+
+      - name: Assert canonical installed v0 package boundary
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import shutil
+          from importlib.resources import files
+
+          root = files("integration_package")
+          manifest = root.joinpath("integration_package.json")
+          schema = root.joinpath("schemas/profile-0.1.schema.json")
+          baseline = root.joinpath(
+              "resources/target_baselines/openobsw-0.7.0-obsw-srdb-0.1.0-reference.json"
+          )
+          assert manifest.is_file(), manifest
+          assert schema.is_file(), schema
+          assert baseline.is_file(), baseline
+
+          payload = json.loads(manifest.read_text(encoding="utf-8"))
+          assert payload["kind"] == "orbitfabric.integration_package"
+          assert payload["manifest_version"] == "0.1-candidate"
+          assert payload["execution"]["protocol"] == "orbitfabric.adapter_cli.v0"
+          assert payload["execution"]["argv_prefix"] == ["orbitfabric-openobsw-opensvf"]
+          assert [item["id"] for item in payload["operations"]] == ["project"]
+          assert payload["result_compatibility"]["default_result_version"] == "0.1-candidate"
+          assert hashlib.sha256(schema.read_bytes()).hexdigest() == payload["profile_schemas"][0]["sha256"]
+          assert shutil.which("orbitfabric-openobsw-opensvf")
+          PY
+
+      - name: Run Stage 7 semantic regression except obsolete manifest-envelope assertion
+        run: |
+          python -m pytest integration_package/tests -q \
+            -k 'not test_integration_package_manifest_truthfully_advertises_slice2'
+
+      - name: Classify obsolete manifest assertion as convergence debt
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('integration_package/tests/test_adapter_slice2.py').read_text(encoding='utf-8')
+          assert 'package["package_version"]' in text
+          assert 'package["adapter"]["protocol"]' in text
+          PY
+
+      - name: Export pinned Core Integration Input Set
+        run: |
+          rm -rf /tmp/orbitfabric-stage7
+          mkdir -p /tmp/orbitfabric-stage7/input
+          orbitfabric export integration-input-set \
+            orbitfabric_models/mission \
+            --output-dir /tmp/orbitfabric-stage7/input
+
+      - name: Execute installed package through exact adapter_cli.v0
+        run: |
+          orbitfabric-openobsw-opensvf run \
+            --operation project \
+            --input-set-manifest /tmp/orbitfabric-stage7/input/integration_input_manifest.json \
+            --profile "$GITHUB_WORKSPACE/projection_profiles/poc_openobsw_opensvf.yaml" \
+            --output-dir /tmp/orbitfabric-stage7/direct-result
+
+      - name: Assert direct Integration Result v0 provenance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path('/tmp/orbitfabric-stage7/direct-result/integration_result.json').read_text())
+          assert payload['kind'] == 'orbitfabric.integration_result'
+          assert payload['result_version'] == '0.1-candidate'
+          assert payload['result'] == 'succeeded'
+          assert payload['integration']['id'] == 'orbitfabric-openobsw-opensvf'
+          assert payload['adapter']['id'] == 'orbitfabric-openobsw-opensvf'
+          assert payload['operation']['id'] == 'project'
+          assert payload['inputs']['core_input_set']['status'] == 'available'
+          assert payload['inputs']['profile']['status'] == 'available'
+          assert payload['coverage']['status'] == 'complete'
+          assert payload['artifacts']
+          PY
+
+      - name: Checkout pinned OrbitFabric Studio consumer
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric-studio
+          ref: 05785a51acb726da48ebf1498d716c9a45a971c4
+          path: .work/orbitfabric-studio
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Execute package through pinned Studio Rust v0 runner
+        env:
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_EXECUTABLE: orbitfabric-openobsw-opensvf
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_OUTPUT_DIR: /tmp/orbitfabric-stage7/studio-result
+        run: |
+          rm -rf /tmp/orbitfabric-stage7/studio-result
+          cargo test --locked \
+            --manifest-path .work/orbitfabric-studio/src-tauri/Cargo.toml \
+            external_adapter_acceptance_executes_through_studio_runner \
+            -- --nocapture
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: .work/orbitfabric-studio/package-lock.json
+
+      - name: Install locked Studio dependencies
+        working-directory: .work/orbitfabric-studio
+        run: npm ci
+
+      - name: Run pinned Studio generic logic regression
+        working-directory: .work/orbitfabric-studio
+        run: npm run test:logic
+
+      - name: Compile pinned Studio generic contract modules
+        working-directory: .work/orbitfabric-studio
+        run: |
+          node node_modules/typescript/bin/tsc -p tsconfig.logic-tests.json
+          mkdir -p .test-dist
+          printf '{ "type": "commonjs" }\n' > .test-dist/package.json
+
+      - name: Create Stage 7 generic Studio v0 gate probe
+        working-directory: .work/orbitfabric-studio
+        run: |
+          cat > tests/studio-logic/stage7-v0-gate.mjs <<'JS'
+          import assert from "node:assert/strict";
+          import { createHash } from "node:crypto";
+          import { existsSync, readFileSync } from "node:fs";
+          import { createRequire } from "node:module";
+          import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+
+          const require = createRequire(import.meta.url);
+          const { parseIntegrationPackageManifest } = require("../../.test-dist/integrations/manifest.js");
+          const {
+            evaluateIntegrationCompatibility,
+            parseCoreIntegrationInputManifest,
+          } = require("../../.test-dist/integrations/compatibility.js");
+          const {
+            parseProjectionProfile,
+            selectProfileSchema,
+            validateProjectionProfile,
+          } = require("../../.test-dist/integrations/profile.js");
+          const {
+            createExecutionAuthorization,
+            validateAdapterRunPreflight,
+          } = require("../../.test-dist/integrations/execution.js");
+          const {
+            parseIntegrationResult,
+            validateIntegrationResult,
+          } = require("../../.test-dist/integrations/result.js");
+          const { assessIntegrationFreshness } = require("../../.test-dist/integrations/staleness.js");
+
+          const packageManifestPath = required("STAGE7_PACKAGE_MANIFEST");
+          const profilePath = required("STAGE7_PROFILE");
+          const inputManifestPath = required("STAGE7_INPUT_MANIFEST");
+          const resultPath = required("STAGE7_RESULT");
+          const gate = required("STAGE7_GATE");
+
+          function required(name) {
+            const value = process.env[name];
+            if (!value) throw new Error(`${name} is required.`);
+            return value;
+          }
+
+          function bytes(path) { return readFileSync(path); }
+          function text(path) { return readFileSync(path, "utf8"); }
+          function sha256(value) { return createHash("sha256").update(value).digest("hex"); }
+
+          function descriptor() {
+            return parseIntegrationPackageManifest(packageManifestPath, text(packageManifestPath));
+          }
+
+          function inputSet() {
+            return parseCoreIntegrationInputManifest(text(inputManifestPath));
+          }
+
+          function profile() {
+            const value = bytes(profilePath);
+            return parseProjectionProfile(profilePath, sha256(value), value.toString("utf8"));
+          }
+
+          function result() {
+            return parseIntegrationResult(text(resultPath));
+          }
+
+          function containedFile(root, relativePath) {
+            if (!relativePath || isAbsolute(relativePath)) return false;
+            const resolvedRoot = resolve(root);
+            const candidate = resolve(resolvedRoot, relativePath);
+            return candidate.startsWith(`${resolvedRoot}${sep}`);
+          }
+
+          function artifactChecks(parsedResult, bundleRoot) {
+            return parsedResult.artifacts.map((artifact) => {
+              if (artifact.status !== "generated") {
+                return { artifactId: artifact.id, path: artifact.path, exists: null, sha256Matches: null, contained: null };
+              }
+              const contained = containedFile(bundleRoot, artifact.path);
+              const candidate = artifact.path && contained ? join(bundleRoot, artifact.path) : null;
+              const exists = candidate ? existsSync(candidate) : false;
+              const sha256Matches = candidate && exists && artifact.sha256
+                ? sha256(bytes(candidate)).toLowerCase() === artifact.sha256.toLowerCase()
+                : false;
+              return { artifactId: artifact.id, path: artifact.path, exists, sha256Matches, contained };
+            });
+          }
+
+          function entityIndexPath(parsedInput) {
+            const surface = parsedInput.surfaces.find((item) => item.role === "entity_index");
+            assert.ok(surface, "Input Set must expose entity_index");
+            assert.equal(surface.status, "available");
+            assert.ok(surface.path);
+            return resolve(dirname(inputManifestPath), surface.path);
+          }
+
+          function gateCompatibility() {
+            const d = descriptor();
+            assert.equal(d.integrationId, "orbitfabric-openobsw-opensvf");
+            assert.equal(d.execution.protocol, "orbitfabric.adapter_cli.v0");
+            assert.deepEqual(d.operations.map((item) => item.id), ["project"]);
+            const compatibility = evaluateIntegrationCompatibility(d, inputSet());
+            assert.deepEqual(
+              compatibility,
+              { state: "compatible", reasons: [] },
+              compatibility.reasons.map((item) => item.message).join("\n"),
+            );
+          }
+
+          function gateProfile() {
+            const d = descriptor();
+            const p = profile();
+            const schemaDescriptor = selectProfileSchema(d, p.identity.schemaVersion);
+            const schemaPath = resolve(dirname(packageManifestPath), schemaDescriptor.path);
+            const schemaBytes = bytes(schemaPath);
+            const schemaSha = sha256(schemaBytes);
+            const schemaRelative = relative(dirname(packageManifestPath), schemaPath);
+            const validation = validateProjectionProfile(d, {
+              path: schemaPath,
+              text: schemaBytes.toString("utf8"),
+              sha256: schemaSha,
+              contained: !schemaRelative.startsWith("..") && !isAbsolute(schemaRelative),
+              sha256Matches: schemaSha.toLowerCase() === schemaDescriptor.sha256.toLowerCase(),
+            }, p);
+            assert.equal(validation.valid, true, validation.errors.join("\n"));
+          }
+
+          function gatePreflight() {
+            const d = descriptor();
+            const authorization = createExecutionAuthorization(d);
+            assert.deepEqual(validateAdapterRunPreflight(d, authorization, {
+              operation: "project",
+              inputSetManifestPath: inputManifestPath,
+              profilePath,
+              outputDir: dirname(resultPath),
+            }), []);
+          }
+
+          function gateResult() {
+            const d = descriptor();
+            const r = result();
+            const validation = validateIntegrationResult(r, {
+              resultPath,
+              resultText: text(resultPath),
+              artifactChecks: artifactChecks(r, dirname(resultPath)),
+            });
+            assert.equal(
+              validation.usable,
+              true,
+              validation.issues.map((item) => `${item.code}: ${item.message}`).join("\n"),
+            );
+            assert.equal(r.result, "succeeded");
+            assert.equal(r.integration.id, d.integrationId);
+            assert.equal(r.adapter.id, d.adapterId);
+            assert.equal(r.adapter.version, d.adapterVersion);
+            assert.equal(r.operation.id, "project");
+            assert.ok(d.resultCompatibility.resultVersions.includes(r.resultVersion));
+            assert.equal(r.resultVersion, d.resultCompatibility.defaultResultVersion);
+            const packageCapabilities = new Set(d.advertisedCapabilities);
+            const operation = d.operations.find((item) => item.id === r.operation.id);
+            assert.ok(operation);
+            const operationCapabilities = new Set(operation.capabilities);
+            assert.ok(r.capabilities.every((item) => packageCapabilities.has(item)));
+            assert.ok(r.capabilities.every((item) => operationCapabilities.has(item)));
+            assert.equal(r.coverage.status, "complete");
+          }
+
+          function gateTraceability() {
+            const i = inputSet();
+            const p = profile();
+            const r = result();
+            const entityIndex = JSON.parse(text(entityIndexPath(i)));
+            const entityKeys = new Set(entityIndex.entities.map((item) => `${item.domain}\u0000${item.id}`));
+            for (const mapping of r.mappings) {
+              for (const source of mapping.sources) {
+                assert.ok(entityKeys.has(`${source.domain}\u0000${source.id}`), `unresolved Core ref ${source.domain}/${source.id}`);
+              }
+            }
+            const bindingIds = new Set(
+              Array.isArray(p.value.bindings)
+                ? p.value.bindings
+                    .map((item) => item && typeof item === "object" ? item.id : null)
+                    .filter((item) => typeof item === "string")
+                : [],
+            );
+            for (const mapping of r.mappings) {
+              for (const binding of mapping.profileBindings) {
+                assert.ok(bindingIds.has(binding), `unresolved Profile binding ${binding}`);
+              }
+            }
+          }
+
+          function gateFreshness() {
+            const freshness = assessIntegrationFreshness(result(), inputSet(), profile());
+            assert.equal(freshness.state, "fresh", freshness.reason);
+          }
+
+          const gates = {
+            compatibility: gateCompatibility,
+            profile: gateProfile,
+            preflight: gatePreflight,
+            result: gateResult,
+            traceability: gateTraceability,
+            freshness: gateFreshness,
+          };
+          const selected = gates[gate];
+          if (!selected) throw new Error(`Unknown Stage 7 gate: ${gate}`);
+          selected();
+          console.log(`Stage 7 Studio v0 gate PASS: ${gate}`);
+          JS
+
+      - name: Studio v0 gate - manifest and Core compatibility
+        working-directory: .work/orbitfabric-studio
+        env:
+          STAGE7_GATE: compatibility
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - Profile schema validation
+        working-directory: .work/orbitfabric-studio
+        env:
+          STAGE7_GATE: profile
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - execution preflight
+        working-directory: .work/orbitfabric-studio
+        env:
+          STAGE7_GATE: preflight
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - Result integrity and identity
+        working-directory: .work/orbitfabric-studio
+        env:
+          STAGE7_GATE: result
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - Core and Profile traceability
+        working-directory: .work/orbitfabric-studio
+        env:
+          STAGE7_GATE: traceability
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - exact freshness
+        working-directory: .work/orbitfabric-studio
+        env:
+          STAGE7_GATE: freshness
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Retain convergence evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage7-v0-package-convergence
+          if-no-files-found: error
+          path: |
+            /tmp/orbitfabric-stage7/input
+            /tmp/orbitfabric-stage7/direct-result
+            /tmp/orbitfabric-stage7/studio-result

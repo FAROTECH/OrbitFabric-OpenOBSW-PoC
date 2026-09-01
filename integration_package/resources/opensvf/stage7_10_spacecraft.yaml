@@ -1,0 +1,11 @@
+version: 1
+spacecraft: OrbitFabric-OpenOBSW-Stage7.10
+
+obsw:
+  type: pipe
+  binary: ../bin/obsw_sim
+
+simulation:
+  dt: 0.1
+  stop_time: 10.0
+  realtime: true

@@ -410,6 +410,7 @@
               "reason"
             ],
             "properties": {
+              "reason": {},
               "config": {
                 "type": "object",
                 "maxProperties": 0
@@ -441,7 +442,10 @@
                   "flight_contract": {
                     "required": [
                       "c_symbol"
-                    ]
+                    ],
+                    "properties": {
+                      "c_symbol": {}
+                    }
                   }
                 }
               }
@@ -485,7 +489,10 @@
                   "obsw_srdb": {
                     "required": [
                       "parameter_id"
-                    ]
+                    ],
+                    "properties": {
+                      "parameter_id": {}
+                    }
                   }
                 }
               }
@@ -530,8 +537,12 @@
                   "flight_contract": {
                     "required": [
                       "command_id"
-                    ]
-                  }
+                    ],
+                    "properties": {
+                      "command_id": {}
+                    }
+                  },
+                  "pus": {}
                 }
               }
             }
@@ -574,7 +585,10 @@
                   "obsw_srdb": {
                     "required": [
                       "event_id"
-                    ]
+                    ],
+                    "properties": {
+                      "event_id": {}
+                    }
                   }
                 }
               }
@@ -618,7 +632,10 @@
                   "obsw_srdb": {
                     "required": [
                       "hk_set"
-                    ]
+                    ],
+                    "properties": {
+                      "hk_set": {}
+                    }
                   }
                 }
               }
@@ -631,7 +648,10 @@
               "config": {
                 "required": [
                   "expected_responses"
-                ]
+                ],
+                "properties": {
+                  "expected_responses": {}
+                }
               }
             },
             "required": [

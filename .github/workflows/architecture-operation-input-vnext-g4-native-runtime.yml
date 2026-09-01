@@ -1,0 +1,100 @@
+name: Architecture Lab operation-input vNext G4 native OpenSVF
+
+on:
+  push:
+    branches:
+      - architecture/operation-input-vnext-g4-scenario
+  workflow_dispatch:
+
+jobs:
+  g4-native-opensvf:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout G4 producer experiment
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned OrbitFabric Core
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric
+          ref: b1aa95408710f697b0ee144a7b41f2376395e01f
+          path: .work/orbitfabric-core
+
+      - name: Checkout pinned OpenOBSW
+        uses: actions/checkout@v4
+        with:
+          repository: lipofefeyt/openOBSW
+          ref: 44ceb71a016f0541ff7a0aa74191e13bafdb59c1
+          path: .work/openobsw
+
+      - name: Checkout pinned OpenSVF
+        uses: actions/checkout@v4
+        with:
+          repository: lipofefeyt/openSVF
+          ref: 667d3eadcb0bbd7814ac324b99946c4ed2f11f23
+          path: .work/opensvf
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install G4 adapter, Core and OpenSVF
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./.work/orbitfabric-core
+          python -m pip install -r requirements-stage7.txt
+          python -m pip install -e .
+          python -m pip install -e ./.work/opensvf
+
+      - name: Assert pinned downstream baselines
+        run: |
+          test "$(git -C .work/openobsw rev-parse HEAD)" = "44ceb71a016f0541ff7a0aa74191e13bafdb59c1"
+          test "$(git -C .work/opensvf rev-parse HEAD)" = "667d3eadcb0bbd7814ac324b99946c4ed2f11f23"
+          test "$(git -C .work/orbitfabric-core rev-parse HEAD)" = "b1aa95408710f697b0ee144a7b41f2376395e01f"
+
+      - name: Export authoritative Core Integration Input Set
+        run: |
+          rm -rf /tmp/orbitfabric-g4-native
+          mkdir -p /tmp/orbitfabric-g4-native/input
+          orbitfabric export integration-input-set \
+            orbitfabric_models/mission \
+            --output-dir /tmp/orbitfabric-g4-native/input
+
+      - name: Produce flight projection through installed G4 project operation
+        run: |
+          orbitfabric-openobsw-opensvf run \
+            --operation project \
+            --input-set-manifest /tmp/orbitfabric-g4-native/input/integration_input_manifest.json \
+            --profile "$GITHUB_WORKSPACE/projection_profiles/poc_openobsw_opensvf.yaml" \
+            --output-dir /tmp/orbitfabric-g4-native/project
+
+      - name: Produce verification assets through installed G4 Scenario binding
+        run: |
+          orbitfabric-openobsw-opensvf run \
+            --operation verification_projection \
+            --input-set-manifest /tmp/orbitfabric-g4-native/input/integration_input_manifest.json \
+            --profile "$GITHUB_WORKSPACE/projection_profiles/poc_openobsw_opensvf.yaml" \
+            --operation-input scenario "$GITHUB_WORKSPACE/orbitfabric_models/scenarios/stage7_10_ping_verification.yaml" \
+            --output-dir /tmp/orbitfabric-g4-native/verification
+
+      - name: Execute generated G4 assets in native OpenSVF runtime
+        run: |
+          python tools/validate_operation_input_vnext_g4_native_runtime.py \
+            --project-output /tmp/orbitfabric-g4-native/project \
+            --verification-output /tmp/orbitfabric-g4-native/verification \
+            --openobsw-repo "$GITHUB_WORKSPACE/.work/openobsw" \
+            --opensvf-repo "$GITHUB_WORKSPACE/.work/opensvf" \
+            --campaign-evidence /tmp/orbitfabric-g4-native/native_campaign_report.json
+
+      - name: Retain native G4 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: operation-input-vnext-g4-native-opensvf
+          path: |
+            /tmp/orbitfabric-g4-native/input
+            /tmp/orbitfabric-g4-native/project
+            /tmp/orbitfabric-g4-native/verification
+            /tmp/orbitfabric-g4-native/native_campaign_report.json
+          if-no-files-found: error
