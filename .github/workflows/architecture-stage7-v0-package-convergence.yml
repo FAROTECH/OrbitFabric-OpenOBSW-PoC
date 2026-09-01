@@ -33,16 +33,13 @@ jobs:
           python -m pip install -r requirements-stage7.txt
           python -m pip install -e '.[dev]'
 
-      - name: Assert installed package resources and canonical v0 manifest
+      - name: Assert canonical installed v0 package boundary
         run: |
           python - <<'PY'
           import hashlib
           import json
           import shutil
           from importlib.resources import files
-          from pathlib import Path
-
-          import integration_package
 
           root = files("integration_package")
           manifest = root.joinpath("integration_package.json")
@@ -61,60 +58,46 @@ jobs:
           assert payload["execution"]["argv_prefix"] == ["orbitfabric-openobsw-opensvf"]
           assert [item["id"] for item in payload["operations"]] == ["project"]
           assert payload["result_compatibility"]["default_result_version"] == "0.1-candidate"
-
-          digest = hashlib.sha256(schema.read_bytes()).hexdigest()
-          assert digest == payload["profile_schemas"][0]["sha256"], (
-              digest,
-              payload["profile_schemas"][0]["sha256"],
-          )
-
-          executable = shutil.which("orbitfabric-openobsw-opensvf")
-          assert executable, "installed console entry point is unavailable"
-          print(f"installed package: {Path(integration_package.__file__).resolve()}")
-          print(f"installed executable: {executable}")
-          print(f"schema sha256: {digest}")
+          assert hashlib.sha256(schema.read_bytes()).hexdigest() == payload["profile_schemas"][0]["sha256"]
+          assert shutil.which("orbitfabric-openobsw-opensvf")
           PY
 
-      - name: Run Stage 7 semantic/regression suite except obsolete manifest-envelope assertion
+      - name: Run Stage 7 semantic regression except obsolete manifest-envelope assertion
         run: |
           python -m pytest integration_package/tests -q \
             -k 'not test_integration_package_manifest_truthfully_advertises_slice2'
 
-      - name: Record obsolete manifest assertion as explicit convergence debt
+      - name: Classify obsolete manifest assertion as convergence debt
         run: |
           python - <<'PY'
           from pathlib import Path
           text = Path('integration_package/tests/test_adapter_slice2.py').read_text(encoding='utf-8')
           assert 'package["package_version"]' in text
           assert 'package["adapter"]["protocol"]' in text
-          print('Historical Stage 7 manifest test intentionally records the pre-canonical envelope.')
-          print('The canonical manifest is asserted independently in this convergence workflow.')
           PY
 
-      - name: Export coherent Core Integration Input Set
+      - name: Export pinned Core Integration Input Set
         run: |
+          rm -rf /tmp/orbitfabric-stage7
           mkdir -p /tmp/orbitfabric-stage7/input
           orbitfabric export integration-input-set \
             orbitfabric_models/mission \
             --output-dir /tmp/orbitfabric-stage7/input
 
-      - name: Execute installed Stage 7 package through exact adapter_cli.v0 argv
+      - name: Execute installed package through exact adapter_cli.v0
         run: |
-          rm -rf /tmp/orbitfabric-stage7/direct-result
           orbitfabric-openobsw-opensvf run \
             --operation project \
             --input-set-manifest /tmp/orbitfabric-stage7/input/integration_input_manifest.json \
             --profile "$GITHUB_WORKSPACE/projection_profiles/poc_openobsw_opensvf.yaml" \
             --output-dir /tmp/orbitfabric-stage7/direct-result
 
-      - name: Assert direct v0 Result identity and provenance
+      - name: Assert direct Integration Result v0 provenance
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-
-          path = Path('/tmp/orbitfabric-stage7/direct-result/integration_result.json')
-          payload = json.loads(path.read_text(encoding='utf-8'))
+          payload = json.loads(Path('/tmp/orbitfabric-stage7/direct-result/integration_result.json').read_text())
           assert payload['kind'] == 'orbitfabric.integration_result'
           assert payload['result_version'] == '0.1-candidate'
           assert payload['result'] == 'succeeded'
@@ -125,7 +108,6 @@ jobs:
           assert payload['inputs']['profile']['status'] == 'available'
           assert payload['coverage']['status'] == 'complete'
           assert payload['artifacts']
-          print(path.read_text(encoding='utf-8'))
           PY
 
       - name: Checkout pinned OrbitFabric Studio consumer
@@ -147,13 +129,14 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Execute installed adapter through current Studio Rust v0 runner
+      - name: Execute package through pinned Studio Rust v0 runner
         env:
           ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_EXECUTABLE: orbitfabric-openobsw-opensvf
           ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
           ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
           ORBITFABRIC_STUDIO_ADAPTER_ACCEPTANCE_OUTPUT_DIR: /tmp/orbitfabric-stage7/studio-result
         run: |
+          rm -rf /tmp/orbitfabric-stage7/studio-result
           cargo test --locked \
             --manifest-path .work/orbitfabric-studio/src-tauri/Cargo.toml \
             external_adapter_acceptance_executes_through_studio_runner \
@@ -170,27 +153,26 @@ jobs:
         working-directory: .work/orbitfabric-studio
         run: npm ci
 
-      - name: Run current Studio generic logic regression suite
+      - name: Run pinned Studio generic logic regression
         working-directory: .work/orbitfabric-studio
         run: npm run test:logic
 
-      - name: Compile real Studio logic modules for Stage 7 generic acceptance
+      - name: Compile pinned Studio generic contract modules
         working-directory: .work/orbitfabric-studio
         run: |
           node node_modules/typescript/bin/tsc -p tsconfig.logic-tests.json
           mkdir -p .test-dist
           printf '{ "type": "commonjs" }\n' > .test-dist/package.json
 
-      - name: Create temporary Stage 7 generic convergence acceptance
+      - name: Create Stage 7 generic Studio v0 gate probe
         working-directory: .work/orbitfabric-studio
         run: |
-          cat > tests/studio-logic/stage7-v0-generic-convergence.test.mjs <<'JS'
+          cat > tests/studio-logic/stage7-v0-gate.mjs <<'JS'
           import assert from "node:assert/strict";
           import { createHash } from "node:crypto";
           import { existsSync, readFileSync } from "node:fs";
           import { createRequire } from "node:module";
           import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-          import test from "node:test";
 
           const require = createRequire(import.meta.url);
           const { parseIntegrationPackageManifest } = require("../../.test-dist/integrations/manifest.js");
@@ -213,27 +195,37 @@ jobs:
           } = require("../../.test-dist/integrations/result.js");
           const { assessIntegrationFreshness } = require("../../.test-dist/integrations/staleness.js");
 
-          const packageManifestPath = requiredEnv("STAGE7_PACKAGE_MANIFEST");
-          const profilePath = requiredEnv("STAGE7_PROFILE");
-          const inputManifestPath = requiredEnv("STAGE7_INPUT_MANIFEST");
-          const resultPath = requiredEnv("STAGE7_RESULT");
+          const packageManifestPath = required("STAGE7_PACKAGE_MANIFEST");
+          const profilePath = required("STAGE7_PROFILE");
+          const inputManifestPath = required("STAGE7_INPUT_MANIFEST");
+          const resultPath = required("STAGE7_RESULT");
+          const gate = required("STAGE7_GATE");
 
-          function requiredEnv(name) {
+          function required(name) {
             const value = process.env[name];
-            if (!value) throw new Error(`${name} is required for Stage 7 convergence acceptance.`);
+            if (!value) throw new Error(`${name} is required.`);
             return value;
           }
 
-          function sha256Bytes(bytes) {
-            return createHash("sha256").update(bytes).digest("hex");
+          function bytes(path) { return readFileSync(path); }
+          function text(path) { return readFileSync(path, "utf8"); }
+          function sha256(value) { return createHash("sha256").update(value).digest("hex"); }
+
+          function descriptor() {
+            return parseIntegrationPackageManifest(packageManifestPath, text(packageManifestPath));
           }
 
-          function readBytes(path) {
-            return readFileSync(path);
+          function inputSet() {
+            return parseCoreIntegrationInputManifest(text(inputManifestPath));
           }
 
-          function readText(path) {
-            return readFileSync(path, "utf8");
+          function profile() {
+            const value = bytes(profilePath);
+            return parseProjectionProfile(profilePath, sha256(value), value.toString("utf8"));
+          }
+
+          function result() {
+            return parseIntegrationResult(text(resultPath));
           }
 
           function containedFile(root, relativePath) {
@@ -243,166 +235,191 @@ jobs:
             return candidate.startsWith(`${resolvedRoot}${sep}`);
           }
 
-          function artifactChecks(result, bundleRoot) {
-            return result.artifacts.map((artifact) => {
+          function artifactChecks(parsedResult, bundleRoot) {
+            return parsedResult.artifacts.map((artifact) => {
               if (artifact.status !== "generated") {
-                return {
-                  artifactId: artifact.id,
-                  path: artifact.path,
-                  exists: null,
-                  sha256Matches: null,
-                  contained: null,
-                };
+                return { artifactId: artifact.id, path: artifact.path, exists: null, sha256Matches: null, contained: null };
               }
-
               const contained = containedFile(bundleRoot, artifact.path);
               const candidate = artifact.path && contained ? join(bundleRoot, artifact.path) : null;
               const exists = candidate ? existsSync(candidate) : false;
-              const sha256Matches =
-                candidate && exists && artifact.sha256
-                  ? sha256Bytes(readBytes(candidate)).toLowerCase() === artifact.sha256.toLowerCase()
-                  : false;
-
-              return {
-                artifactId: artifact.id,
-                path: artifact.path,
-                exists,
-                sha256Matches,
-                contained,
-              };
+              const sha256Matches = candidate && exists && artifact.sha256
+                ? sha256(bytes(candidate)).toLowerCase() === artifact.sha256.toLowerCase()
+                : false;
+              return { artifactId: artifact.id, path: artifact.path, exists, sha256Matches, contained };
             });
           }
 
-          function entityIndexPath(inputManifest) {
-            const surface = inputManifest.surfaces.find((item) => item.role === "entity_index");
-            assert.ok(surface, "Input Set must declare Entity Index surface");
+          function entityIndexPath(parsedInput) {
+            const surface = parsedInput.surfaces.find((item) => item.role === "entity_index");
+            assert.ok(surface, "Input Set must expose entity_index");
             assert.equal(surface.status, "available");
-            assert.ok(surface.path, "available Entity Index surface must have a path");
+            assert.ok(surface.path);
             return resolve(dirname(inputManifestPath), surface.path);
           }
 
-          test("Studio generic v0 contracts consume current Stage 7 package", () => {
-            const packageText = readText(packageManifestPath);
-            const descriptor = parseIntegrationPackageManifest(packageManifestPath, packageText);
-
-            assert.equal(descriptor.integrationId, "orbitfabric-openobsw-opensvf");
-            assert.equal(descriptor.execution.protocol, "orbitfabric.adapter_cli.v0");
-            assert.deepEqual(descriptor.operations.map((item) => item.id), ["project"]);
-
-            const inputSet = parseCoreIntegrationInputManifest(readText(inputManifestPath));
-            const compatibility = evaluateIntegrationCompatibility(descriptor, inputSet);
+          function gateCompatibility() {
+            const d = descriptor();
+            assert.equal(d.integrationId, "orbitfabric-openobsw-opensvf");
+            assert.equal(d.execution.protocol, "orbitfabric.adapter_cli.v0");
+            assert.deepEqual(d.operations.map((item) => item.id), ["project"]);
+            const compatibility = evaluateIntegrationCompatibility(d, inputSet());
             assert.deepEqual(
               compatibility,
               { state: "compatible", reasons: [] },
               compatibility.reasons.map((item) => item.message).join("\n"),
             );
+          }
 
-            const profileBytes = readBytes(profilePath);
-            const profile = parseProjectionProfile(
-              profilePath,
-              sha256Bytes(profileBytes),
-              profileBytes.toString("utf8"),
-            );
-            const schemaDescriptor = selectProfileSchema(descriptor, profile.identity.schemaVersion);
+          function gateProfile() {
+            const d = descriptor();
+            const p = profile();
+            const schemaDescriptor = selectProfileSchema(d, p.identity.schemaVersion);
             const schemaPath = resolve(dirname(packageManifestPath), schemaDescriptor.path);
-            const schemaBytes = readBytes(schemaPath);
-            const schemaSha = sha256Bytes(schemaBytes);
+            const schemaBytes = bytes(schemaPath);
+            const schemaSha = sha256(schemaBytes);
             const schemaRelative = relative(dirname(packageManifestPath), schemaPath);
-            const schemaRead = {
+            const validation = validateProjectionProfile(d, {
               path: schemaPath,
               text: schemaBytes.toString("utf8"),
               sha256: schemaSha,
               contained: !schemaRelative.startsWith("..") && !isAbsolute(schemaRelative),
               sha256Matches: schemaSha.toLowerCase() === schemaDescriptor.sha256.toLowerCase(),
-            };
-            const profileValidation = validateProjectionProfile(descriptor, schemaRead, profile);
-            assert.equal(profileValidation.valid, true, profileValidation.errors.join("\n"));
+            }, p);
+            assert.equal(validation.valid, true, validation.errors.join("\n"));
+          }
 
-            const authorization = createExecutionAuthorization(descriptor);
-            const runRequest = {
+          function gatePreflight() {
+            const d = descriptor();
+            const authorization = createExecutionAuthorization(d);
+            assert.deepEqual(validateAdapterRunPreflight(d, authorization, {
               operation: "project",
               inputSetManifestPath: inputManifestPath,
               profilePath,
               outputDir: dirname(resultPath),
-            };
-            assert.deepEqual(validateAdapterRunPreflight(descriptor, authorization, runRequest), []);
+            }), []);
+          }
 
-            const resultText = readText(resultPath);
-            const result = parseIntegrationResult(resultText);
-            const bundle = {
+          function gateResult() {
+            const d = descriptor();
+            const r = result();
+            const validation = validateIntegrationResult(r, {
               resultPath,
-              resultText,
-              artifactChecks: artifactChecks(result, dirname(resultPath)),
-            };
-            const resultValidation = validateIntegrationResult(result, bundle);
+              resultText: text(resultPath),
+              artifactChecks: artifactChecks(r, dirname(resultPath)),
+            });
             assert.equal(
-              resultValidation.usable,
+              validation.usable,
               true,
-              resultValidation.issues.map((item) => `${item.code}: ${item.message}`).join("\n"),
+              validation.issues.map((item) => `${item.code}: ${item.message}`).join("\n"),
             );
-
-            assert.equal(result.result, "succeeded");
-            assert.equal(result.integration.id, descriptor.integrationId);
-            assert.equal(result.adapter.id, descriptor.adapterId);
-            assert.equal(result.adapter.version, descriptor.adapterVersion);
-            assert.equal(result.operation.id, "project");
-
-            const packageCapabilities = new Set(descriptor.advertisedCapabilities);
-            const operation = descriptor.operations.find((item) => item.id === result.operation.id);
+            assert.equal(r.result, "succeeded");
+            assert.equal(r.integration.id, d.integrationId);
+            assert.equal(r.adapter.id, d.adapterId);
+            assert.equal(r.adapter.version, d.adapterVersion);
+            assert.equal(r.operation.id, "project");
+            assert.ok(d.resultCompatibility.resultVersions.includes(r.resultVersion));
+            assert.equal(r.resultVersion, d.resultCompatibility.defaultResultVersion);
+            const packageCapabilities = new Set(d.advertisedCapabilities);
+            const operation = d.operations.find((item) => item.id === r.operation.id);
             assert.ok(operation);
             const operationCapabilities = new Set(operation.capabilities);
-            assert.ok(result.capabilities.every((item) => packageCapabilities.has(item)));
-            assert.ok(result.capabilities.every((item) => operationCapabilities.has(item)));
+            assert.ok(r.capabilities.every((item) => packageCapabilities.has(item)));
+            assert.ok(r.capabilities.every((item) => operationCapabilities.has(item)));
+            assert.equal(r.coverage.status, "complete");
+          }
 
-            assert.equal(result.coverage.status, "complete");
-            const coverageStates = new Set(result.coverage.records.map((item) => item.state));
-            assert.ok(coverageStates.has("projected"));
-            assert.ok(coverageStates.has("not_projected"));
-
-            const entityIndex = JSON.parse(readText(entityIndexPath(inputSet)));
-            const entityKeys = new Set(
-              entityIndex.entities.map((item) => `${item.domain}\u0000${item.id}`),
-            );
-            for (const mapping of result.mappings) {
+          function gateTraceability() {
+            const i = inputSet();
+            const p = profile();
+            const r = result();
+            const entityIndex = JSON.parse(text(entityIndexPath(i)));
+            const entityKeys = new Set(entityIndex.entities.map((item) => `${item.domain}\u0000${item.id}`));
+            for (const mapping of r.mappings) {
               for (const source of mapping.sources) {
-                assert.ok(
-                  entityKeys.has(`${source.domain}\u0000${source.id}`),
-                  `mapping ${mapping.id} source ${source.domain}/${source.id} must resolve in Core Entity Index`,
-                );
+                assert.ok(entityKeys.has(`${source.domain}\u0000${source.id}`), `unresolved Core ref ${source.domain}/${source.id}`);
               }
             }
-
-            const profileBindingIds = new Set(
-              Array.isArray(profile.value.bindings)
-                ? profile.value.bindings
-                    .map((item) => (item && typeof item === "object" ? item.id : null))
+            const bindingIds = new Set(
+              Array.isArray(p.value.bindings)
+                ? p.value.bindings
+                    .map((item) => item && typeof item === "object" ? item.id : null)
                     .filter((item) => typeof item === "string")
                 : [],
             );
-            for (const mapping of result.mappings) {
+            for (const mapping of r.mappings) {
               for (const binding of mapping.profileBindings) {
-                assert.ok(
-                  profileBindingIds.has(binding),
-                  `mapping ${mapping.id} binding ${binding} must resolve`,
-                );
+                assert.ok(bindingIds.has(binding), `unresolved Profile binding ${binding}`);
               }
             }
+          }
 
-            const freshness = assessIntegrationFreshness(result, inputSet, profile);
+          function gateFreshness() {
+            const freshness = assessIntegrationFreshness(result(), inputSet(), profile());
             assert.equal(freshness.state, "fresh", freshness.reason);
-          });
+          }
+
+          const gates = {
+            compatibility: gateCompatibility,
+            profile: gateProfile,
+            preflight: gatePreflight,
+            result: gateResult,
+            traceability: gateTraceability,
+            freshness: gateFreshness,
+          };
+          const selected = gates[gate];
+          if (!selected) throw new Error(`Unknown Stage 7 gate: ${gate}`);
+          selected();
+          console.log(`Stage 7 Studio v0 gate PASS: ${gate}`);
           JS
 
-      - name: Consume current Stage 7 through real Studio generic v0 contracts
+      - name: Studio v0 gate - manifest and Core compatibility
         working-directory: .work/orbitfabric-studio
-        env:
+        env: &stage7-env
+          STAGE7_GATE: compatibility
           STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
           STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
           STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
           STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
-        run: node --test tests/studio-logic/stage7-v0-generic-convergence.test.mjs
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - Profile schema validation
+        working-directory: .work/orbitfabric-studio
+        env:
+          <<: *stage7-env
+          STAGE7_GATE: profile
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - execution preflight
+        working-directory: .work/orbitfabric-studio
+        env:
+          <<: *stage7-env
+          STAGE7_GATE: preflight
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - Result integrity and identity
+        working-directory: .work/orbitfabric-studio
+        env:
+          <<: *stage7-env
+          STAGE7_GATE: result
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - Core and Profile traceability
+        working-directory: .work/orbitfabric-studio
+        env:
+          <<: *stage7-env
+          STAGE7_GATE: traceability
+        run: node tests/studio-logic/stage7-v0-gate.mjs
+
+      - name: Studio v0 gate - exact freshness
+        working-directory: .work/orbitfabric-studio
+        env:
+          <<: *stage7-env
+          STAGE7_GATE: freshness
+        run: node tests/studio-logic/stage7-v0-gate.mjs
 
       - name: Retain convergence evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: stage7-v0-package-convergence
