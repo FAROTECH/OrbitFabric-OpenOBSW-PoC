@@ -21,7 +21,7 @@ from validate_stage7_10f_final_runtime_acceptance import (
     EXPECTED_SCENARIO_ID,
     _assert_report_traceability,
     _copy_runtime_binary,
-    _find_obsw,
+    _find_obsw_sim,
 )
 
 
@@ -145,7 +145,7 @@ def main() -> int:
             ["cmake", "--build", str(build_dir), "--target", "obsw_sim"],
             label="OpenOBSW G4 native build",
         )
-        sim_binary = _find_obsw(build_dir)
+        sim_binary = _find_obsw_sim(build_dir)
         runtime_binary = _copy_runtime_binary(sim_binary, runtime_bundle)
 
         spacecraft = yaml.safe_load(
