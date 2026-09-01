@@ -1,7 +1,8 @@
 # Systematic PoC Asset Inventory
 
-Status: Architecture extraction draft for review  
-Inventory baseline: upstream `lipofefeyt/OrbitFabric-OpenOBSW-PoC` `main` at `5400fc0b81b378e028da3a1a681c8fae82e53874` (Stage 6.19 merged)
+Status: **historical extraction inventory with Reference Adapter baseline update**
+Original inventory baseline: upstream `lipofefeyt/OrbitFabric-OpenOBSW-PoC` `main` at `5400fc0b81b378e028da3a1a681c8fae82e53874` (Stage 6.19 merged)
+Current interpretation baseline: Stage 6.20 PoC closure + Stage 7.10 Reference Integration baseline
 
 Related document:
 
@@ -39,11 +40,63 @@ RETIRE      legacy/empty/temporary scaffolding that should not drive architectur
 
 ---
 
+## Current baseline update
+
+The original inventory below was created during architecture extraction and is intentionally retained because it records how PoC assets were classified before the Reference Adapter existed.
+
+The current baseline supersedes several forward-looking statements:
+
+```text
+PoC runtime evidence
+    closed through Stage 6.20
+
+Projection Profile
+    extracted and version-controlled
+
+Integration Package / Adapter
+    implemented
+
+Reference Adapter
+    orbitfabric-openobsw-opensvf 0.1.0
+
+Reference Integration
+    validated through Stage 7.10
+```
+
+The most important asset transition is:
+
+```text
+legacy:
+orbitfabric_models/poc_slice.yaml
+tools/generate_poc_artifacts.py
+
+current reference integration:
+projection_profiles/poc_openobsw_opensvf.yaml
+integration_package/
+integration_result.json
+```
+
+The legacy assets remain useful historical evidence and regression material, but they are no longer the preferred production-oriented integration boundary.
+
+The Stage 6 YAMCS/OpenSVF/OpenOBSW harness family remains `TEST-ONLY` / reference evidence rather than becoming the Adapter public API.
+
+Where historical classifications below discuss architecture that was still future, read them together with:
+
+```text
+docs/reference_integration_baseline_v0_1.md
+docs/integration_responsibility_matrix.md
+docs/roadmap.md
+```
+
+Those documents are authoritative for the current baseline.
+
+---
+
 # 2. Repository-level inventory
 
 ## `README.md`
 
-**Role:** public PoC overview, source-model vs mapping-layer distinction, current baseline and workflow.
+**Role:** public PoC and Reference Integration overview, source/input vs projection boundary, current baseline, ownership, and workflow.
 
 **Evidence provided:** establishes that the PoC is a continuity chain, not a flight framework; records the split between `orbitfabric_models/mission/` and `poc_slice.yaml`.
 
@@ -553,7 +606,7 @@ The production architecture should consume the facts they proved, not their stag
 
 **Production fate:** `REFERENCE`.
 
-Once architecture extraction begins, production work should be tracked separately rather than extending the PoC roadmap indefinitely.
+Architecture extraction is now validated through Stage 7.10. The roadmap records the completed PoC and extraction history; future productionization work should be tracked as explicit new workstreams rather than extending the original PoC indefinitely.
 
 ---
 

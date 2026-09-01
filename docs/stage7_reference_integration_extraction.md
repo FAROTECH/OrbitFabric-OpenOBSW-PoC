@@ -1,6 +1,8 @@
 # Stage 7 - Reference Integration Package Extraction
 
-Status: **in progress**
+Status: **reference baseline achieved**
+
+The detailed Stage 7 sections below intentionally preserve the extraction plan and the wording used while the work was being executed. Phrases such as `Next milestone` or `Planned deliverables` are historical design context. Section 12 records the achieved baseline and is authoritative for current status.
 
 Baseline:
 
@@ -13,7 +15,7 @@ OpenOBSW/OpenSVF ownership review approved by Goncalo
 
 ## 1. Purpose
 
-Stage 7 transitions the repository from progressive PoC runtime probing to extraction of the durable OrbitFabric OpenOBSW/OpenSVF reference integration.
+Stage 7 transitioned the repository from progressive PoC runtime probing to extraction of the durable OrbitFabric/OpenOBSW/OpenSVF reference integration.
 
 Stage 7 does not add another Stage 6.x runtime experiment by default.
 
@@ -62,11 +64,11 @@ Stage 6 evidence proves representative integration continuity. It does not claim
 
 The PR #30 review established the production ownership boundary used by Stage 7:
 
-1. The OrbitFabric integration generates OpenSVF-compatible SRDB. OpenSVF owns XTCE generation.
+1. The Adapter generates an SRDB contribution; `obsw-srdb` owns complete target composition and collision semantics; OpenSVF owns XTCE generation on the downstream path.
 2. Generated OpenOBSW-facing output remains contract-only. OpenOBSW owns C11 runtime behavior, packet framing, dispatch, HK scheduling and event materialization.
 3. Long-term OpenSVF integration should use supported public APIs rather than PoC monkey-patching or private injection.
 4. `YamcsBridge` remains the OpenSVF/YAMCS integration boundary.
-5. The adapter compatibility contract should carry explicit OpenOBSW/OpenSVF/SRDB compatibility markers.
+5. The Adapter compatibility contract carries explicit producer and OpenOBSW/OpenSVF/SRDB compatibility markers.
 6. OpenSVF campaign JSON remains canonical verification evidence. Integration Result references evidence rather than implementing another verifier.
 
 One additional implementation constraint from the review is critical for SRDB generation:
@@ -78,7 +80,7 @@ The adapter must not infer or duplicate that packet-layout fact privately.
 
 ## 4. Stage 7.0 - Extraction baseline
 
-Status: **in progress in this branch**
+Status: **completed as the Stage 7.0 extraction checkpoint**
 
 Goals:
 
@@ -384,3 +386,92 @@ out-of-process adapter_cli.v0 project operation
 ```
 
 At that point the Stage 6 PoC remains as historical evidence and regression source material, while the Stage 7 package becomes the durable reference integration implementation.
+
+## 12. Reference Integration baseline achieved
+
+The original Stage 7 exit criteria are now satisfied.
+
+The extraction sequence established:
+
+```text
+Stage 7.1
+    integration-specific Projection Profile schema
+
+Stage 7.2
+    compatibility preflight design
+
+Stage 7.3
+    executable Adapter Slice 1
+
+Stage 7.4
+    deterministic flight contract and SRDB contribution generation
+
+Stage 7.5
+    target-owned SRDB composition
+
+Stage 7.6
+    external assembled-SRDB build/codegen consumption
+
+Stage 7.7
+    full OpenOBSW host-sim build/runtime from projected integration artifacts
+
+Stage 7.8
+    native OpenSVF runtime consumption
+
+Stage 7.9
+    native OpenSVF campaign execution and machine-readable evidence
+
+Stage 7.10
+    explicit OrbitFabric verification projection semantics,
+    native OpenSVF materialization, and traceable runtime evidence
+```
+
+The resulting public Integration Package surface remains intentionally small:
+
+```text
+operation:
+    project
+
+capabilities:
+    profile_validation
+    projection
+    artifact_generation
+    traceability
+```
+
+The reference Adapter implementation is frozen at:
+
+```text
+orbitfabric-openobsw-opensvf
+version 0.1.0
+```
+
+This does not stabilize the generic external contracts themselves. The Integration Package, Projection Profile, and Integration Result contracts remain independently versioned `0.1-candidate` surfaces.
+
+Stage 7.10 also established a validated verification-projection extension, but that path is intentionally not promoted into the Adapter `0.1.0` public operation surface. Verification productization remains a separate architecture and API decision.
+
+The baseline is therefore a validated engineering reference, not a declaration that the shared integration architecture is permanently complete.
+
+Further work may include:
+
+```text
+dedicated Adapter repository extraction
+generic package discovery / installation / orchestration
+future Integration Package contract evolution
+verification projection as a first-class operation
+requirement projection
+binary-layout authority where explicitly required
+numeric allocation / namespace policy
+additional downstream mappings
+hardware / HIL targets
+```
+
+Such work may evolve how the integration is packaged or invoked without invalidating the evidence established by this Stage 7 baseline.
+
+See:
+
+```text
+docs/reference_integration_baseline_v0_1.md
+```
+
+for the frozen baseline statement.

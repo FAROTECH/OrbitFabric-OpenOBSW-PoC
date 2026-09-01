@@ -1,8 +1,8 @@
-# OrbitFabric Core to OpenOBSW/OpenSVF Integration Vision
+# OrbitFabric <-> OpenOBSW/OpenSVF Integration Vision
 
 ## Purpose
 
-This document captures the intended direction for the integration between OrbitFabric Core and the OpenOBSW/OpenSVF ecosystem.
+This document captures the intended direction for the integration boundary between OrbitFabric Core and the OpenOBSW/OpenSVF ecosystem.
 
 The objective is not to turn OrbitFabric into a flight software framework, nor to replace OpenOBSW, OpenSVF, XTCE, YAMCS, or existing PUS tooling.
 
@@ -20,15 +20,44 @@ The first proof of concept is intentionally small.
 
 Its purpose is to prove the integration boundary, not to cover a complete spacecraft mission.
 
-## Core Principle
+## Current Baseline Update
+
+The original PoC is now closed through Stage 6.20, and the first Reference Integration extraction is validated through Stage 7.10.
+
+```text
+producer side
+    OrbitFabric Core Integration Input Set
+
+integration boundary
+    Projection Profile
+    Integration Package / Adapter
+    Integration Result
+
+downstream side
+    obsw-srdb target composition
+    OpenOBSW flight/runtime behavior
+    OpenSVF simulation/campaign/YamcsBridge behavior
+    YAMCS ground-runtime behavior
+```
+
+The reference Adapter implementation is frozen at `0.1.0`.
+
+The generic Projection Profile, Integration Package, and Integration Result contracts remain `0.1-candidate`.
+
+This is a validated reference baseline, not a declaration that future package topology or generic integration architecture is permanently complete.
+
+
+## Ownership Principle
 
 OrbitFabric Core remains the semantic source of truth.
 
 It owns mission-level definitions such as telemetry parameters, commands, events, faults, modes, packets, data products, and policies.
 
-OpenOBSW/OpenSVF remain the execution and verification environment.
+OpenOBSW and `obsw-srdb` retain target-composition and flight/runtime authority.
 
-The integration layer translates OrbitFabric semantic mission definitions into concrete OpenOBSW/OpenSVF-facing artifacts.
+OpenSVF retains simulation, campaign, procedure, bridge, and verification semantics, while YAMCS retains ground-runtime semantics.
+
+The integration layer connects the Core-owned semantic input to those downstream-owned target/runtime contracts through explicit projection, validation, traceability, and provenance.
 
 ## Key Architectural Boundary
 
@@ -52,7 +81,7 @@ OF_EVENT_VOLTAGE_OUT_OF_BOUNDS = 0x5001
 
 Numeric values belong to the integration/profile layer, not to the Core semantic model.
 
-## Target Continuity Chain
+## Original PoC Continuity Chain (Historical)
 
 ```text
 OrbitFabric Mission Model
@@ -73,6 +102,8 @@ YAMCS visibility
     ↓
 Verification evidence
 ```
+
+This original PoC chain remains useful as historical context. The current Stage 7 boundary refines it through the Core Integration Input Set, Projection Profile, Adapter, target-owned SRDB composition, and Integration Result described above.
 
 The important point is that telemetry, commands, events, faults, packets, and verification expectations should not be manually redefined at each layer.
 
@@ -114,7 +145,7 @@ If this direction proves practical, the value does not come from artifact genera
 
 The value comes from preserving consistency across the lifecycle.
 
-## Current Assessment of Development Effort
+## Early PoC Assessment of Development Effort (Historical)
 
 Current working assessment for the initial PoC:
 
@@ -141,9 +172,11 @@ Instead, it requires feeding them with information derived from a higher-level m
 
 Some OpenSVF/OpenOBSW adjustments may still be needed around SRDB ingestion, generated artifact placement, or test harness integration. Those changes should remain minimal and justified by the PoC.
 
-## The Missing Concept: Projection Profiles
+## Projection Profiles: From PoC Observation to Reference Baseline
 
-One observation emerging from the PoC is that OrbitFabric currently models mission semantics well, while ecosystem-specific projection rules are still deliberately external.
+An early PoC observation was that mission semantics and ecosystem-specific projection rules needed an explicit boundary.
+
+Stage 7 has now turned that observation into a version-controlled Projection Profile consumed by the Reference Adapter.
 
 Conceptually:
 
@@ -178,9 +211,9 @@ The Mission Model remains stable.
 
 Profiles determine how that model is projected into a specific ecosystem.
 
-For this PoC, the projection logic lives in the shared PoC repository.
+For the current Reference Integration, the Projection Profile and Adapter implementation live in this shared repository.
 
-Longer term, a reusable OpenOBSW/OpenSVF projection profile may live either on the OrbitFabric side or in a dedicated profile repository.
+Longer term, production packaging may remain here or move to a dedicated Adapter/profile repository. That repository-topology decision remains open and does not change the validated ownership boundary.
 
 ## Adapter Ownership
 
@@ -209,42 +242,22 @@ Reasoning:
 * OpenOBSW/OpenSVF should remain independent consumers.
 * They should not need to understand OrbitFabric internals.
 * They should continue consuming standard or ecosystem-native artifacts such as C headers, SRDB YAML, and XTCE-compatible inputs.
-* OrbitFabric-side tooling or profile adapters can be responsible for producing projections.
+* The shared Integration Adapter can be responsible for producing explicit target projections.
 * OpenOBSW/OpenSVF remain responsible for execution and verification.
 
 ## Potential Future Repository Structure
 
-This is not an immediate PoC requirement.
+The current repository is both historical PoC evidence and the incubation location of the first Reference Adapter.
 
-A possible future OrbitFabric-side direction could be:
-
-```text
-orbitfabric/
-├── core/
-├── lint/
-├── sim/
-└── profiles/
-     └── openobsw/
-```
-
-A cleaner option may be a dedicated repository:
+A future productionization step may extract the durable integration into a dedicated package or repository, for example:
 
 ```text
-orbitfabric-openobsw-profile
+orbitfabric-openobsw-adapter
 ```
 
-containing:
+or another topology chosen after the generic Integration Package lifecycle is clearer.
 
-```text
-mapping logic
-artifact generators
-allocation rules
-profile-specific validation
-```
-
-This would keep OrbitFabric Core independent from ecosystem-specific integrations.
-
-For now, the shared PoC repository is the correct place for experimentation.
+The important architectural constraint is not the repository name. It is that Core remains backend-agnostic, the Adapter remains at the integration boundary, and downstream target/runtime semantics remain owned by OpenOBSW/obsw-srdb/OpenSVF/YAMCS.
 
 ## Semantic Events vs Physical PUS Events
 
@@ -312,7 +325,7 @@ That is still relatively uncommon across many CubeSat and small satellite develo
 
 The goal is not to create another flight software framework.
 
-The goal is to establish a mission contract authority capable of projecting a validated mission definition into multiple engineering domains while preserving consistency, traceability, and verification continuity.
+The goal is to establish an explicit integration contract boundary that connects a validated mission definition to downstream target, runtime, and verification domains while preserving consistency, ownership, traceability, and evidence continuity.
 
 The success metric is not code generation.
 

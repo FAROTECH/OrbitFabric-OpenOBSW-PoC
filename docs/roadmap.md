@@ -1,10 +1,39 @@
-# PoC Roadmap
+# PoC and Reference Integration Roadmap
 
-This roadmap defines the public execution plan for the OrbitFabric ↔ OpenOBSW/OpenSVF Proof of Concept.
+This roadmap preserves the detailed stage-by-stage engineering history of the OrbitFabric <-> OpenOBSW/OpenSVF integration while recording the current Reference Adapter baseline.
 
-The roadmap is intentionally staged.
+## Current Authoritative Checkpoint
 
-Each stage should be small, reviewable, and independently useful.
+```text
+Original thin PoC evidence baseline
+    achieved through Stage 6.20
+
+Reference Integration extraction
+    validated through Stage 7.10
+
+Reference Adapter
+    orbitfabric-openobsw-opensvf 0.1.0
+
+Public Adapter operation
+    project
+
+Generic external contracts
+    remain 0.1-candidate
+```
+
+The PoC evidence baseline and Reference Adapter baseline are frozen engineering checkpoints.
+
+They do not claim final production packaging, final repository topology, stable generic discovery/orchestration contracts, hardware/HIL validation, or complete scenario projection coverage.
+
+See [`reference_integration_baseline_v0_1.md`](reference_integration_baseline_v0_1.md) for the exact frozen boundary.
+
+## How to Read Historical Status Text
+
+The detailed Stage 0-6 entries below are preserved as engineering history.
+
+Statements such as `pending`, `prepared locally`, or `still open` describe the state when that stage was written. They are not the current repository status when a later stage explicitly closed the same path.
+
+The current authoritative closure is Stage 6.20 for the original PoC and Stage 7.10 for the Reference Integration extraction.
 
 ## Stage 0 - Core-Compatible Source Model
 
@@ -124,7 +153,7 @@ The generated files must be stable across repeated runs.
 
 ## Stage 3 - OpenSVF SRDB and XTCE/YAMCS MDB Wrapper
 
-Status: **completed for local PoC generation, YAMCS runtime still pending**
+Status: **completed for local PoC generation; later YAMCS runtime closure is recorded in Stage 6**
 
 Goal:
 
@@ -193,7 +222,7 @@ Acceptance criteria:
 
 ## Stage 5 - Closed-Loop Validation
 
-Status: **partially completed**
+Status: **completed by the later Stage 6 runtime closure**
 
 Goal:
 
@@ -217,7 +246,7 @@ Completed:
 * the PUS ping command path is validated by Stage 6.3 using OpenSVF campaign tooling and pipe mode;
 * machine-readable campaign evidence can be generated locally.
 
-Still open:
+Open at this historical checkpoint, and later closed by Stage 6:
 
 * runtime validation of `TM(3,25)` housekeeping telemetry;
 * runtime validation of the `TM(5,3)` warning event/fault path;
@@ -225,7 +254,7 @@ Still open:
 
 ## Stage 6 - OpenSVF Runtime Bridge Discovery and Hardening
 
-Status: **in progress**
+Status: **completed through Stage 6.20**
 
 Goal:
 
@@ -781,7 +810,6 @@ The initial PoC does not attempt to:
 * make OrbitFabric Core emit XTCE directly;
 * replace OpenSVF's SRDB/XTCE/YAMCS responsibilities;
 * replace OpenOBSW runtime behavior;
-* introduce OrbitFabric Studio as a runtime dependency.
 
 ### Stage 6.15 - YAMCS Archive and MDB Classification Probe
 
@@ -836,3 +864,181 @@ This stage moves beyond representative packet generation. It builds `obsw_sim` a
 The validator preserves the PoC soft-skip rule for optional sibling repositories. PoC-local artifacts are always validated, but the live runtime probe is skipped with an explicit `NOTICE` when `../opensvf` or `../openobsw` is absent.
 
 This stage does not claim YAMCS TC command path execution, live event/fault runtime generation, full OpenSVF/OpenOBSW/YAMCS closed-loop campaign execution, hardware target execution, or production deployment hardening.
+
+---
+
+## Stage 6.18 - Live OpenOBSW Event TM to YAMCS
+
+Status: **completed**
+
+Closed the selected live event path:
+
+```text
+eps.voltage_out_of_bounds
+-> OpenOBSW event materialization
+-> TM(5,3)
+-> real OpenSVF YamcsBridge
+-> YAMCS packet archive / MDB classification
+```
+
+This stage strengthened the earlier event-readiness and MDB-projection work with live OpenOBSW-generated telemetry.
+
+## Stage 6.19 - YAMCS-Originated TC Direction Closure
+
+Status: **completed**
+
+Closed the opposite command direction:
+
+```text
+YAMCS TC(17,1)
+-> OpenSVF
+-> OpenOBSW
+-> TM(1,1)
+-> TM(17,2)
+-> TM(1,7)
+-> YAMCS
+```
+
+This completed the representative ground-originated telecommand loop without moving command-execution semantics out of OpenOBSW or command-release semantics out of YAMCS.
+
+## Stage 6.20 - Final PoC Integration Evidence Matrix
+
+Status: **completed**
+
+Stage 6.20 consolidated the selected thin slice:
+
+```text
+Telemetry
+eps.obc.bus_voltage_mv
+-> OpenOBSW TM(3,25)
+-> OpenSVF YamcsBridge
+-> YAMCS archive / MDB classification
+
+Command
+YAMCS TC(17,1)
+-> OpenSVF
+-> OpenOBSW
+-> TM(1,1), TM(17,2), TM(1,7)
+-> YAMCS
+
+Event
+eps.voltage_out_of_bounds
+-> OpenOBSW TM(5,3)
+-> OpenSVF YamcsBridge
+-> YAMCS archive / MDB classification
+```
+
+The original PoC goal is therefore closed at representative integration-evidence level.
+
+This does not imply production qualification, hardware-target execution, HIL validation, or operational deployment hardening.
+
+---
+
+# Stage 7 - Reference Integration Extraction
+
+Status: **reference baseline achieved through Stage 7.10**
+
+Stage 7 extracted a durable integration boundary from the proven PoC rather than continuing to broaden Stage 6 by default.
+
+The architectural shift is:
+
+```text
+historical PoC input
+Mission Model YAML + poc_slice.yaml
+        |
+        v
+PoC-specific generators
+```
+
+to:
+
+```text
+Core Integration Input Set
+        +
+Projection Profile
+        |
+        v
+out-of-process Integration Package / Adapter
+        |
+        +-> OpenOBSW-facing contract
+        +-> obsw-srdb contribution
+        +-> Integration Result
+        |
+        v
+target-owned composition and downstream runtime
+```
+
+Detailed extraction rationale is preserved in [`stage7_reference_integration_extraction.md`](stage7_reference_integration_extraction.md).
+
+## Stage 7 progression
+
+| Stage | Status | Outcome |
+|---|---|---|
+| 7.0 | completed | extraction baseline and ownership framing |
+| 7.1 | completed | Projection Profile schema and target allocation boundary |
+| 7.2 | completed | compatibility-preflight contract |
+| 7.3 | completed | executable Adapter resolution/preflight slice |
+| 7.4 | completed | deterministic OpenOBSW-facing contract, SRDB contribution, and Integration Result |
+| 7.5 | completed | target-owned SRDB composition |
+| 7.6 | completed | external assembled-SRDB build/codegen consumption |
+| 7.7 | completed | OpenOBSW host-sim build/runtime from projected integration artifacts |
+| 7.8 | completed | native OpenSVF runtime consumption |
+| 7.9 | completed | native OpenSVF campaign execution and evidence |
+| 7.10 | completed | explicit verification projection and final dual-branch runtime acceptance |
+
+## Stage 7.10 closure
+
+One authoritative Core Integration Input Set and one Projection Profile were exercised through two downstream evidence branches:
+
+```text
+flight/runtime branch
+
+Core Integration Input Set + Profile
+-> Adapter project
+-> OpenOBSW-facing contract + SRDB contribution
+-> target-owned composition
+-> OpenOBSW runtime
+```
+
+```text
+verification branch
+
+Core Integration Input Set + Profile + scenario
+-> Verification Projection Plan
+-> OpenSVF procedure materialization
+-> OpenOBSW runtime built from the projected contract and composed target SRDB
+-> native OpenSVF CampaignReport
+```
+
+Final native campaign acceptance:
+
+```text
+PASS: 1
+FAIL: 0
+ERROR: 0
+INCONCLUSIVE: 0
+Pass rate: 100.0%
+```
+
+The verification extension is validated but intentionally not advertised as a first-class Adapter `0.1.0` public operation.
+
+---
+
+# Reference Adapter 0.1.0 Baseline
+
+Status: **frozen reference implementation baseline**
+
+```text
+Adapter
+    orbitfabric-openobsw-opensvf 0.1.0
+
+Public operation
+    project
+
+Generic external contracts
+    0.1-candidate
+```
+
+Adapter `0.1.0` does not stabilize the generic Projection Profile, Integration Package, or Integration Result contracts.
+
+Future productionization and integration-architecture evolution are explicit new workstreams rather than unfinished PoC closure.

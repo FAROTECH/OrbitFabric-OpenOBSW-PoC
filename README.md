@@ -1,8 +1,8 @@
-# OrbitFabric ↔ OpenOBSW : MBSE Vertical Slice PoC
+# OrbitFabric ↔ OpenOBSW/OpenSVF : PoC to Reference Integration
 
 ## The Vision
 
-This repository is a Proof of Concept (PoC) demonstrating a minimal, end-to-end Model-Based Systems Engineering (MBSE) continuity chain for spacecraft software validation.
+This repository began as a Proof of Concept (PoC) demonstrating a minimal, end-to-end Model-Based Systems Engineering (MBSE) continuity chain for spacecraft software validation. It now also preserves the first validated OpenOBSW/OpenSVF Reference Integration baseline extracted from that evidence.
 
 It bridges:
 
@@ -11,9 +11,9 @@ It bridges:
 
 The goal is not to turn OrbitFabric into flight software, nor to replace OpenOBSW, OpenSVF, XTCE, YAMCS, or PUS tooling.
 
-The goal is to prove that a validated OrbitFabric Mission Model can be projected into concrete flight-side and ground-side artifacts, then exercised through an execution and validation loop.
+The goal is to prove that producer-side mission semantics, explicit projection choices, downstream target representations, runtime behavior, and verification evidence can be connected without collapsing ownership between the participating systems.
 
-## The Goal: The Thin Vertical Slice
+## Original Goal: The Thin Vertical Slice
 
 The first PoC slice intentionally stays small:
 
@@ -39,18 +39,22 @@ For the longer-term architectural direction, see [Integration Vision](docs/integ
 
 For the detailed PoC stage history, see [Roadmap](docs/roadmap.md).
 
-For the current transition from PoC evidence to a durable reference integration, see [Stage 7 Reference Integration Package Extraction](docs/stage7_reference_integration_extraction.md).
+For the current validated reference baseline, see [Reference Integration Baseline v0.1](docs/reference_integration_baseline_v0_1.md).
+
+For the extraction history and design sequence, see [Stage 7 Reference Integration Package Extraction](docs/stage7_reference_integration_extraction.md).
 
 ## Repository Structure & Data Flow
 
-The repository separates the OrbitFabric source model, PoC-specific mapping/allocation data, extracted Projection Profile work, generated artifacts, execution assets, validation tools, and local evidence.
+The repository sits at the integration boundary between a Core-owned mission model and downstream OpenOBSW/OpenSVF execution and verification. It separates semantic input, target projection choices, Adapter implementation, target-facing artifacts, runtime evidence, and historical PoC scaffolding.
 
 ```text
 orbitfabric_models/
   mission/              OrbitFabric Core-compatible Mission Model
   poc_slice.yaml         Legacy PoC mapping/allocation layer
 
-projection_profiles/     Stage 7 Projection Profile extraction candidates
+projection_profiles/     Version-controlled target Projection Profile
+
+integration_package/      Reference Integration Package / Adapter implementation
 
 generated_artifacts/
   flight_software/       Generated OpenOBSW-facing C contract artifacts
@@ -91,23 +95,39 @@ It is the original PoC mapping/allocation layer used to associate the semantic m
 
 That file remains useful PoC evidence and migration input, but Stage 7 no longer treats it as the future production integration schema.
 
-The production-oriented boundary now follows the OrbitFabric v1.2 integration architecture:
+The reference-integration boundary consumes the OrbitFabric Core v1.2 Integration Input Set and composes it with downstream-owned target/runtime contracts:
 
 ```text
 OrbitFabric Mission Model
-        ↓
+        |
+        v
 OrbitFabric Core
-        ↓
 Core Integration Input Set
-        ↓
+        |
+        v
 Projection Profile
-        ↓
+        |
+        v
 OpenOBSW/OpenSVF Integration Package / Adapter
-        ↓
-Integration Result + target artifacts
+        |
+        +-> OpenOBSW-facing contract
+        +-> obsw-srdb contribution
+        +-> Integration Result
+        |
+        v
+obsw-srdb target composition
+        |
+        v
+OpenOBSW build/runtime
+        |
+        v
+OpenSVF campaign / YamcsBridge
+        |
+        v
+YAMCS runtime evidence
 ```
 
-Core remains the semantic authority. Target-specific projection choices belong to the Projection Profile and Integration Package.
+Core remains the semantic authority for mission meaning. The Projection Profile and Adapter own integration-specific projection choices and traceability; obsw-srdb/OpenOBSW own target composition and flight/runtime behavior; OpenSVF and YAMCS retain their native verification and ground-runtime semantics.
 
 ## Current Baseline
 
@@ -154,11 +174,15 @@ Event
 
 This evidence is deliberately narrow. It does not claim production mission integration, hardware-target execution, production FDIR behavior, production commanding security/authorization, or operational deployment hardening.
 
-## Stage 7: Reference Integration Extraction
+## Stage 7: Reference Integration Baseline
 
-The current engineering phase is no longer to broaden the PoC by default.
+Stage 7 has reached the first validated **OrbitFabric OpenOBSW/OpenSVF Reference Integration** baseline across the OrbitFabric Core v1.2 Integration Input Set and the audited OpenOBSW/OpenSVF downstream boundaries.
 
-Stage 7 extracts the durable **OrbitFabric OpenOBSW/OpenSVF Reference Integration** from the proven PoC using the contracts published with OrbitFabric Core v1.2.0.
+The reference Adapter implementation is frozen at version `0.1.0`.
+
+The generic Projection Profile, Integration Package, and Integration Result contracts remain independently versioned candidate contracts. Adapter `0.1.0` therefore identifies a validated reference implementation baseline, not a claim that the surrounding generic integration architecture is permanently stable.
+
+The repository now preserves both the original PoC evidence and the extracted reference implementation at the boundary between producer and downstream systems. Further work is treated as productionization or integration-architecture evolution rather than as additional evidence required to establish this baseline.
 
 The intended durable chain is:
 
@@ -176,33 +200,35 @@ OpenSVF-compatible SRDB artifact
 Integration Result with traceability/provenance
 ```
 
-The first extraction candidate is:
+The baseline Projection Profile is:
 
 ```text
 projection_profiles/poc_openobsw_opensvf.yaml
 ```
 
-It uses Core `{domain,id}` identity for semantic sources and keeps OpenOBSW/OpenSVF-specific PoC numeric allocations, PUS mapping, HK allocation, and target naming choices outside Core semantics. The long-term allocation/stability policy for those numeric values remains an integration-specific Stage 7 decision.
+It uses Core `{domain,id}` identity for semantic sources and keeps downstream-specific numeric allocations, PUS mapping, HK allocation, and target naming choices outside Core semantics. The long-term allocation/stability policy for those values remains an integration-specific productionization and architecture decision.
 
-The legacy `poc_slice.yaml` remains unchanged as PoC evidence while this extraction proceeds.
+The legacy `poc_slice.yaml` remains unchanged as historical PoC evidence and migration/reference material.
 
-See [Stage 7 Reference Integration Package Extraction](docs/stage7_reference_integration_extraction.md) for the implementation sequence and non-goals.
+See [Stage 7 Reference Integration Package Extraction](docs/stage7_reference_integration_extraction.md) for the extraction history, implementation sequence, and non-goals.
+
+See [Reference Integration Baseline v0.1](docs/reference_integration_baseline_v0_1.md) for the frozen validation boundary and explicit productionization follow-ups.
 
 ## Key Ownership Boundaries
 
-The reviewed production direction is:
+The reviewed ownership direction is:
 
 * OrbitFabric Core owns Mission Model semantics and the coherent Core Integration Input Set.
 * The Projection Profile records authored target-specific projection choices.
-* The OpenOBSW/OpenSVF Integration Package owns target-specific schema, validation, projection, generation, traceability, and compatibility checks.
+* The OpenOBSW/OpenSVF Integration Package / Adapter owns integration-specific schema, validation, mapping, contribution generation, traceability, provenance, and compatibility checks.
+* `obsw-srdb` owns complete target-SRDB composition, collision rules, and target code-generation semantics.
 * OpenOBSW owns C11 flight/runtime behavior, including packet framing, command dispatch, HK scheduling, and event materialization.
-* OpenSVF owns SRDB consumption, XTCE generation, simulation/campaign behavior, and `YamcsBridge`.
+* OpenSVF owns native simulation, spacecraft loading, campaign/procedure semantics, XTCE generation from the composed SRDB path, and `YamcsBridge`.
 * YAMCS owns MDB/runtime interpretation, TM/TC links, archive behavior, and command release semantics.
-* OrbitFabric Studio may later visualize and orchestrate explicit integration contracts, but it is not a semantic owner or a second adapter.
 
 ## Development Workflow
 
-This PoC and reference-integration extraction are developed through branch-based collaboration.
+This PoC and Reference Integration are developed through branch-based collaboration.
 
 Use branches and pull requests.
 

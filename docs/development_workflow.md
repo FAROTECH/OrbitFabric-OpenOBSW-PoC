@@ -1,6 +1,6 @@
 # Development Workflow
 
-This document defines the recommended development workflow for the OrbitFabric ↔ OpenOBSW/OpenSVF PoC.
+This document defines the recommended development workflow for the OrbitFabric <-> OpenOBSW/OpenSVF PoC and Reference Integration repository.
 
 ## Repository Layout
 
@@ -57,12 +57,14 @@ Use branch-based development.
 
 Do not push directly to `main`.
 
-For every change:
+For a fork/upstream setup:
 
 ```bash
-git checkout main
-git pull --ff-only origin main
-git checkout -b <branch-name>
+git fetch --all --prune
+git switch main
+git pull --ff-only upstream main
+git push origin main
+git switch -c <branch-name>
 ```
 
 Then commit and open a PR.
@@ -86,40 +88,19 @@ execution/validate-s17-ping-loop
 
 ## Collaborator Workflow
 
-For collaborators with write access to the shared PoC repository:
+A common local configuration is:
 
 ```text
-origin = git@github.com:lipofefeyt/OrbitFabric-OpenOBSW-PoC.git
+origin
+    personal or organization fork
+
+upstream
+    canonical lipofefeyt/OrbitFabric-OpenOBSW-PoC
 ```
 
-A personal fork can be kept as backup, but the normal workflow should be:
+Push the feature branch to `origin`, then open a pull request against canonical `main`.
 
-```text
-origin/main
-  -> feature branch
-  -> PR into origin/main
-```
-
-Example:
-
-```bash
-git fetch --all --prune
-git checkout main
-git pull --ff-only origin main
-git checkout -b docs/align-poc-documentation-after-core-slice
-```
-
-Push:
-
-```bash
-git push -u origin docs/align-poc-documentation-after-core-slice
-```
-
-Open PR:
-
-```bash
-gh pr create --base main --head docs/align-poc-documentation-after-core-slice
-```
+Collaborators who use the canonical repository directly may use a different remote layout, but the same rule applies: branch-based changes and pull-request review, not direct pushes to canonical `main`.
 
 ## Pull Request Rules
 
@@ -127,14 +108,13 @@ Each PR should be small and reviewable.
 
 Prefer one concern per PR.
 
-Recommended sequence:
+For current Reference Integration work, prefer one concern per PR, for example:
 
-1. documentation alignment;
-2. adapter prototype;
-3. generated artifact shape;
-4. SRDB/XTCE ingestion;
-5. OpenOBSW integration;
-6. execution/validation evidence.
+1. contract/schema or compatibility changes;
+2. Adapter implementation changes;
+3. target composition or downstream integration changes;
+4. verification/evidence changes;
+5. documentation or baseline updates.
 
 Avoid mixing:
 
@@ -158,20 +138,40 @@ When generated artifacts are committed, they must be:
 
 ## Validation Commands
 
-Before opening PRs that touch the OrbitFabric Mission Model:
+For changes that touch the legacy PoC Mission Model, keep the Core lint check:
 
 ```bash
 orbitfabric lint orbitfabric_models/mission/
 ```
 
-Before adapter PRs:
+For Reference Adapter changes, run the Integration Package unit suite:
 
 ```bash
-orbitfabric lint orbitfabric_models/mission/
-python tools/generate_poc_artifacts.py
+python -m unittest discover \
+  -s integration_package/tests \
+  -p "test_*.py" \
+  -v
 ```
 
-Additional commands will be added as the PoC grows.
+For verification-projection contract changes:
+
+```bash
+python tools/validate_stage7_10c_projection_plan_contract.py
+```
+
+Changes that affect native downstream build/runtime behavior should run the appropriate Stage 7 native acceptance validator against the pinned sibling repositories.
+
+Documentation-only changes do not require rerunning expensive native runtime acceptance.
+
+Keep implementation and generic contract versions distinct:
+
+```text
+Adapter implementation
+    0.1.0
+
+Projection Profile / Integration Package / Integration Result generic contracts
+    0.1-candidate
+```
 
 ## What Not to Do
 
@@ -182,4 +182,6 @@ Do not:
 * copy private Reference Mission content into the PoC;
 * make OrbitFabric Core depend on OpenOBSW/OpenSVF;
 * put runtime logic inside generated `mission_contract.h`;
-* introduce Docker before the basic adapter and execution chain are clear.
+* treat Stage-numbered PoC harnesses or Docker sidecars as the public Adapter API;
+* treat generated C structs as implicit wire-format contracts;
+* make the Adapter a second SRDB implementation or a second verifier.

@@ -1,4 +1,4 @@
-# OrbitFabric ↔ OpenOBSW / OpenSVF Integration Concept & Mapping
+# OrbitFabric <-> OpenOBSW/OpenSVF Integration Concept & Mapping
 
 ## 1. Introduction and Scope
 
@@ -18,6 +18,31 @@ OrbitFabric Core Mission Model
 
 The PoC is intentionally narrow. It is meant to prove the contract continuity chain, not to model a complete spacecraft mission.
 
+### Current reference baseline
+
+The selected PoC slice is closed through Stage 6.20 and the extracted Reference Integration is validated through Stage 7.10.
+
+The current durable input boundary is:
+
+```text
+OrbitFabric Core Integration Input Set
+        +
+Projection Profile
+        |
+        v
+Integration Package / Adapter
+        |
+        +-> OpenOBSW-facing contract
+        +-> obsw-srdb contribution
+        +-> Integration Result
+        |
+        v
+target-owned composition / runtime / verification
+```
+
+The original raw Mission Model + `poc_slice.yaml` path remains historical PoC evidence and regression material.
+
+
 ## 2. Architectural Boundary
 
 OrbitFabric Core remains the semantic Mission Data Contract authority.
@@ -33,9 +58,9 @@ OrbitFabric Core owns mission-level concepts such as:
 * data products;
 * policies.
 
-OpenOBSW and OpenSVF remain execution and verification environments.
+OpenOBSW and `obsw-srdb` retain target-composition and flight/runtime ownership. OpenSVF retains simulation/campaign/verification ownership, and YAMCS retains ground-runtime ownership.
 
-The PoC adapter consumes:
+The original PoC adapter consumes:
 
 ```text
 orbitfabric_models/mission/
@@ -46,7 +71,7 @@ and generates ecosystem-facing artifacts.
 
 OrbitFabric Core itself does not become dependent on OpenOBSW, OpenSVF, YAMCS, XTCE, or PUS-specific tooling.
 
-## 3. Source Model vs PoC Mapping Layer
+## 3. Legacy PoC Source Model vs Mapping Layer
 
 The PoC uses two distinct inputs.
 
@@ -106,7 +131,35 @@ They are not OrbitFabric Core-stable semantic identifiers.
 
 They are also not APIDs, packet IDs, or packed PUS service/subservice identifiers. For example, `0x1701` is mnemonic for the PoC ping allocation but must not be interpreted as the wire encoding of `TC[17,1]`. PUS alignment is defined only by the explicit mapping fields such as `pus_service`, `pus_subtype`, housekeeping SID, and event mapping.
 
+For the Reference Adapter baseline, `poc_slice.yaml` is no longer the preferred integration contract. Its durable role has been extracted into:
+
+```text
+Core Integration Input Set
++
+projection_profiles/poc_openobsw_opensvf.yaml
++
+integration_package/
+```
+
+
 ## 4. High-Level Data Flow
+
+### 4.1 Current Reference Integration path
+
+```text
+OrbitFabric Mission Model
+-> OrbitFabric Core
+-> Core Integration Input Set
+-> Projection Profile
+-> Integration Package / Adapter
+-> OpenOBSW-facing contract + obsw-srdb contribution
+-> target-owned composition
+-> OpenOBSW runtime
+-> OpenSVF/YAMCS evidence
+```
+
+### 4.2 Historical PoC path
+
 
 1. **Mission Definition**
 
@@ -296,7 +349,7 @@ has operational meaning and can be materialized as a PUS Service 5 warning event
 
 The adapter should preserve meaning. It should not blindly materialize every semantic concept onto the wire.
 
-## 8. Validated Baseline After Stage 6.3
+## 8. Historical Runtime Baseline After Stage 6.3
 
 The following parts of the mapping chain are validated in the current repository baseline:
 
@@ -335,28 +388,56 @@ simulation:
 
 Campaign procedures that observe telemetry in wall-clock time should use realtime simulation mode.
 
+### Current closure after Stage 6.20 and Stage 7.10
+
+The Stage 6.3 limitations above are intentionally preserved as historical evidence.
+
+They were subsequently closed for the selected slice:
+
+```text
+TM(3,25) housekeeping
+    validated live through OpenSVF/YAMCS
+
+TM(5,3) event
+    validated live through OpenSVF/YAMCS
+
+YAMCS-originated TC(17,1)
+    validated through OpenSVF -> OpenOBSW -> response TM
+
+Reference Integration
+    extracted and validated through Stage 7.10
+```
+
+The current Reference Adapter consumes the Core Integration Input Set plus the Projection Profile rather than reconstructing semantics from the legacy raw-YAML PoC path.
+
+
 ## 9. Settled Decisions
 
 | Decision | Resolution |
 | :--- | :--- |
 | OrbitFabric entry point | OrbitFabric Core |
-| Studio dependency | Not part of the PoC pipeline |
 | Core role | Semantic Mission Data Contract authority |
-| Adapter role | Projection/mapping layer from Core model to ecosystem artifacts |
+| Adapter role | Integration mapping/projection from Core Integration Input Set + Profile to target contributions and Integration Result |
 | `mission_contract.h` role | Contract-only C11 header |
 | C prefix | `OF_` |
 | Numeric IDs | PoC adapter allocation values, not APIDs, packet IDs, or packed PUS service/subservice identifiers |
 | HK C structs | In-memory contract representations, not wire-format payload layouts |
-| Ground artifact path | PoC adapter -> OpenSVF-compatible SRDB -> OpenSVF XTCE/YAMCS MDB |
+| Ground artifact path | Adapter SRDB contribution -> target-owned composition -> OpenSVF XTCE/YAMCS MDB |
 | First execution target | OpenOBSW host simulation through OpenSVF pipe mode |
 | Custom bridge process | Not needed for the first runtime smoke |
-| STM32/bare-metal | Deferred until the contract boundary is stable |
+| Hardware / HIL targets | Future productionization work; not part of the Reference Adapter baseline |
 
-## 10. Current Open Items
+## 10. Current Open Work
 
-1. Keep top-level documentation synchronized with the actual merged PoC baseline.
-2. Validate the runtime housekeeping telemetry path for `TM(3,25)`.
-3. Decide whether the `obsw-srdb` version-handshake warning should become a clean-environment requirement.
-4. Validate the event/fault path for `TM(5,3)`.
-5. Decide the YAMCS runtime execution boundary after OpenSVF-only runtime evidence is stronger.
-6. Add reproducibility hardening only after the runtime paths are stable.
+The original selected-slice runtime questions are closed.
+
+Remaining work is productionization or architecture evolution:
+
+1. decide the final dedicated Adapter/package repository topology;
+2. evolve generic package discovery, installation, operation-input, and orchestration contracts;
+3. decide whether verification projection becomes a first-class public Adapter operation;
+4. define requirement projection if required;
+5. introduce explicit binary-layout contracts only where required;
+6. define long-term numeric allocation / namespace policy;
+7. broaden scenario-expectation coverage without silent semantic reinterpretation;
+8. validate hardware/HIL targets when production work requires them.
