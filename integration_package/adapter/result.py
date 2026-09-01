@@ -82,6 +82,7 @@ def failed_result(operation: str, failure: AdapterFailure) -> dict[str, Any]:
                 "Projection Profile provenance unavailable",
                 profile=True,
             ),
+            "operation_inputs": [],
         },
         "capabilities": capabilities,
         "artifacts": _not_generated_artifacts(failure.message) if artifact_phase else [],
