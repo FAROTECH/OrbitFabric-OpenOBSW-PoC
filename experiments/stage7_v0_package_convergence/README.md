@@ -65,4 +65,6 @@ existing Stage 7 project tests
 Studio Rust v0 external-adapter acceptance
 ```
 
+The Studio consumer also establishes one package-boundary requirement that was not explicit in the older Stage 7 line: package-owned Projection Profile schemas must compile and validate under Studio's strict AJV configuration. The convergence correction makes the existing schema strict-compatible without changing the accepted Profile semantics.
+
 Failure of any item is evidence to be classified before operation-input vNext work begins.
