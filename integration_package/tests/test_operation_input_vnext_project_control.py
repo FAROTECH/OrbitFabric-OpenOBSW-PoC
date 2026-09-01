@@ -4,14 +4,13 @@ import json
 import tempfile
 from pathlib import Path
 
-from integration_package.adapter.model import ADAPTER_VERSION, RESULT_VERSION
+from integration_package.adapter.model import ADAPTER_VERSION, RESULT_VERSION, AdapterFailure
 from integration_package.adapter.preflight import run_project
 from integration_package.adapter.result import failed_result
-from integration_package.adapter.model import AdapterFailure
 from integration_package.tests.test_adapter_slice1 import PROFILE_PATH, REPO_ROOT, _build_input_set
 
 
-def test_lab_vnext_manifest_declares_zero_input_project() -> None:
+def test_lab_vnext_manifest_retains_zero_input_project() -> None:
     package = json.loads(
         (REPO_ROOT / "integration_package" / "integration_package.json").read_text(
             encoding="utf-8"
@@ -20,17 +19,19 @@ def test_lab_vnext_manifest_declares_zero_input_project() -> None:
 
     assert package["kind"] == "orbitfabric.integration_package"
     assert package["manifest_version"] == "0.2-lab"
-    assert package["adapter"]["version"] == ADAPTER_VERSION == "0.2.0.dev1"
+    assert package["adapter"]["version"] == ADAPTER_VERSION == "0.2.0.dev2"
     assert package["execution"]["protocol"] == "orbitfabric.adapter_cli.vnext-lab"
     assert package["result_compatibility"] == {
         "result_versions": ["0.2-lab"],
         "default_result_version": "0.2-lab",
     }
 
-    assert len(package["operations"]) == 1
-    operation = package["operations"][0]
-    assert operation["id"] == "project"
-    assert operation["input_requirements"] == []
+    operations = {item["id"]: item for item in package["operations"]}
+    assert set(operations) == {"project", "verification_projection"}
+    assert operations["project"]["input_requirements"] == []
+    assert operations["verification_projection"]["input_requirements"] == [
+        {"role": "scenario"}
+    ]
 
 
 def test_lab_vnext_project_result_retains_zero_operation_inputs() -> None:
@@ -53,7 +54,7 @@ def test_lab_vnext_project_result_retains_zero_operation_inputs() -> None:
     assert result["mappings"]
 
 
-def test_lab_vnext_failed_result_has_explicit_empty_operation_inputs() -> None:
+def test_lab_vnext_failed_project_result_has_explicit_empty_operation_inputs() -> None:
     failure = AdapterFailure(
         "OFI-LAB-001",
         "input_compatibility",
