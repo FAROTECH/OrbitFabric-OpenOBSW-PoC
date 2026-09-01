@@ -375,7 +375,7 @@ jobs:
 
       - name: Studio v0 gate - manifest and Core compatibility
         working-directory: .work/orbitfabric-studio
-        env: &stage7-env
+        env:
           STAGE7_GATE: compatibility
           STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
           STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
@@ -386,36 +386,51 @@ jobs:
       - name: Studio v0 gate - Profile schema validation
         working-directory: .work/orbitfabric-studio
         env:
-          <<: *stage7-env
           STAGE7_GATE: profile
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
         run: node tests/studio-logic/stage7-v0-gate.mjs
 
       - name: Studio v0 gate - execution preflight
         working-directory: .work/orbitfabric-studio
         env:
-          <<: *stage7-env
           STAGE7_GATE: preflight
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
         run: node tests/studio-logic/stage7-v0-gate.mjs
 
       - name: Studio v0 gate - Result integrity and identity
         working-directory: .work/orbitfabric-studio
         env:
-          <<: *stage7-env
           STAGE7_GATE: result
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
         run: node tests/studio-logic/stage7-v0-gate.mjs
 
       - name: Studio v0 gate - Core and Profile traceability
         working-directory: .work/orbitfabric-studio
         env:
-          <<: *stage7-env
           STAGE7_GATE: traceability
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
         run: node tests/studio-logic/stage7-v0-gate.mjs
 
       - name: Studio v0 gate - exact freshness
         working-directory: .work/orbitfabric-studio
         env:
-          <<: *stage7-env
           STAGE7_GATE: freshness
+          STAGE7_PACKAGE_MANIFEST: ${{ github.workspace }}/integration_package/integration_package.json
+          STAGE7_PROFILE: ${{ github.workspace }}/projection_profiles/poc_openobsw_opensvf.yaml
+          STAGE7_INPUT_MANIFEST: /tmp/orbitfabric-stage7/input/integration_input_manifest.json
+          STAGE7_RESULT: /tmp/orbitfabric-stage7/studio-result/integration_result.json
         run: node tests/studio-logic/stage7-v0-gate.mjs
 
       - name: Retain convergence evidence
