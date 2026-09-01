@@ -2,11 +2,11 @@
   "kind": "orbitfabric.integration_package",
   "manifest_version": "0.2-lab",
   "integration": {
-    "id": "orbitfabric-openobsw-opensvf"
+    "id": "openobsw-opensvf-reference"
   },
   "adapter": {
     "id": "orbitfabric-openobsw-opensvf",
-    "version": "0.2.0.dev1"
+    "version": "0.2.0.dev2"
   },
   "core_input_compatibility": {
     "input_set_versions": [
@@ -14,22 +14,15 @@
     ],
     "surfaces": [
       {
-        "role": "entity_index",
-        "kind": "orbitfabric.entity_index",
-        "format_versions": [
-          "0.1"
-        ]
-      },
-      {
-        "role": "lint_report",
-        "kind": "orbitfabric-lint",
-        "format_versions": [
-          "v1"
-        ]
-      },
-      {
         "role": "mission_snapshot",
         "kind": "orbitfabric.mission_snapshot",
+        "format_versions": [
+          "0.1-candidate"
+        ]
+      },
+      {
+        "role": "entity_index",
+        "kind": "orbitfabric.entity_index",
         "format_versions": [
           "0.1-candidate"
         ]
@@ -40,9 +33,29 @@
         "format_versions": [
           "0.1-candidate"
         ]
+      },
+      {
+        "role": "lint_report",
+        "kind": "orbitfabric.lint_report",
+        "format_versions": [
+          "0.1-candidate"
+        ]
+      },
+      {
+        "role": "model_summary",
+        "kind": "orbitfabric.model_summary",
+        "format_versions": [
+          "0.1-candidate"
+        ]
       }
     ],
-    "relationship_families": []
+    "relationship_families": [
+      "telemetry_to_packet",
+      "command_to_subsystem",
+      "event_to_subsystem",
+      "fault_to_subsystem",
+      "mode_transition"
+    ]
   },
   "profile_compatibility": {
     "profile_versions": [
@@ -71,14 +84,28 @@
         "traceability"
       ],
       "input_requirements": []
+    },
+    {
+      "id": "verification_projection",
+      "capabilities": [
+        "profile_validation",
+        "projection",
+        "artifact_generation",
+        "traceability"
+      ],
+      "input_requirements": [
+        {
+          "role": "scenario"
+        }
+      ]
     }
   ],
   "profile_schemas": [
     {
       "schema_version": "0.1-candidate",
-      "format": "json-schema-2020-12",
+      "format": "json-schema-draft-2020-12",
       "path": "schemas/profile-0.1.schema.json",
-      "sha256": "73349a28ba63df2c1b0a2e9f00a9d40c9bddfccfa745122f564200a48b20b0fe"
+      "sha256": "92bc50891438dce73bb0165d035786fbc90d37ab7a39e599c49b39e022196f0d"
     }
   ],
   "execution": {
