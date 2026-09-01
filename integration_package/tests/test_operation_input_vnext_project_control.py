@@ -18,12 +18,12 @@ def test_lab_vnext_manifest_retains_zero_input_project() -> None:
     )
 
     assert package["kind"] == "orbitfabric.integration_package"
-    assert package["manifest_version"] == "0.2-lab"
+    assert package["manifest_version"] == "0.2-candidate"
     assert package["adapter"]["version"] == ADAPTER_VERSION == "0.2.0.dev2"
-    assert package["execution"]["protocol"] == "orbitfabric.adapter_cli.vnext-lab"
+    assert package["execution"]["protocol"] == "orbitfabric.adapter_cli.v1"
     assert package["result_compatibility"] == {
-        "result_versions": ["0.2-lab"],
-        "default_result_version": "0.2-lab",
+        "result_versions": ["0.2-candidate"],
+        "default_result_version": "0.2-candidate",
     }
 
     operations = {item["id"]: item for item in package["operations"]}
@@ -43,7 +43,7 @@ def test_lab_vnext_project_result_retains_zero_operation_inputs() -> None:
         result = run_project(manifest, PROFILE_PATH, output_dir=output)
 
     assert result["result"] == "succeeded"
-    assert result["result_version"] == RESULT_VERSION == "0.2-lab"
+    assert result["result_version"] == RESULT_VERSION == "0.2-candidate"
     assert result["adapter"]["version"] == ADAPTER_VERSION
     assert result["operation"] == {"id": "project"}
     assert result["inputs"]["operation_inputs"] == []
@@ -64,5 +64,5 @@ def test_lab_vnext_failed_project_result_has_explicit_empty_operation_inputs() -
     result = failed_result("project", failure)
 
     assert result["result"] == "failed"
-    assert result["result_version"] == "0.2-lab"
+    assert result["result_version"] == "0.2-candidate"
     assert result["inputs"]["operation_inputs"] == []

@@ -1,6 +1,6 @@
 {
   "kind": "orbitfabric.integration_package",
-  "manifest_version": "0.2-lab",
+  "manifest_version": "0.2-candidate",
   "integration": {
     "id": "orbitfabric-openobsw-opensvf"
   },
@@ -51,9 +51,9 @@
   },
   "result_compatibility": {
     "result_versions": [
-      "0.2-lab"
+      "0.2-candidate"
     ],
-    "default_result_version": "0.2-lab"
+    "default_result_version": "0.2-candidate"
   },
   "capabilities": [
     "profile_validation",
@@ -96,7 +96,7 @@
     }
   ],
   "execution": {
-    "protocol": "orbitfabric.adapter_cli.vnext-lab",
+    "protocol": "orbitfabric.adapter_cli.v1",
     "argv_prefix": [
       "orbitfabric-openobsw-opensvf"
     ]

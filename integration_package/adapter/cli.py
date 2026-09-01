@@ -33,7 +33,7 @@ def _parser() -> argparse.ArgumentParser:
         metavar=("ROLE", "PATH"),
         default=[],
         help=(
-            "Experimental vNext-lab operation input binding. Repeat as "
+            "Operation-input v1 binding. Repeat as "
             "--operation-input ROLE PATH."
         ),
     )
