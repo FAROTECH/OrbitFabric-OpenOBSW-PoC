@@ -53,6 +53,7 @@ def _success_result(
                 "sha256": profile.sha256,
                 "reason": None,
             },
+            "operation_inputs": [],
         },
         "capabilities": capabilities,
         "artifacts": artifacts,
