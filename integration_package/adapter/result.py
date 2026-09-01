@@ -27,6 +27,16 @@ def unavailable_input(reason: str, *, profile: bool = False) -> dict[str, Any]:
     }
 
 
+def unavailable_operation_input(role: str, reason: str) -> dict[str, Any]:
+    return {
+        "role": role,
+        "status": "unavailable",
+        "id": None,
+        "sha256": None,
+        "reason": reason,
+    }
+
+
 def _not_generated_artifacts(reason: str) -> list[dict[str, Any]]:
     return [
         {
@@ -56,7 +66,12 @@ def _not_generated_artifacts(reason: str) -> list[dict[str, Any]]:
     ]
 
 
-def failed_result(operation: str, failure: AdapterFailure) -> dict[str, Any]:
+def failed_result(
+    operation: str,
+    failure: AdapterFailure,
+    *,
+    operation_inputs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     artifact_phase = failure.phase == "artifact_generation"
     capabilities = (
         ["profile_validation", "projection", "artifact_generation", "traceability"]
@@ -82,7 +97,7 @@ def failed_result(operation: str, failure: AdapterFailure) -> dict[str, Any]:
                 "Projection Profile provenance unavailable",
                 profile=True,
             ),
-            "operation_inputs": [],
+            "operation_inputs": operation_inputs or [],
         },
         "capabilities": capabilities,
         "artifacts": _not_generated_artifacts(failure.message) if artifact_phase else [],
