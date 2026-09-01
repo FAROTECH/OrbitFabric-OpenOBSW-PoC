@@ -1,53 +1,40 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
-
-INTEGRATION_ID = "openobsw-opensvf-reference"
-ADAPTER_ID = "orbitfabric-openobsw-opensvf"
+INTEGRATION_ID = "orbitfabric-openobsw-opensvf"
+ADAPTER_ID = INTEGRATION_ID
 ADAPTER_VERSION = "0.2.0.dev2"
-RESULT_KIND = "orbitfabric.integration_result"
 RESULT_VERSION = "0.2-lab"
+PROFILE_VERSION = "0.1-candidate"
+PROFILE_SCHEMA_VERSION = "0.1-candidate"
+INPUT_SET_VERSION = "0.1-candidate"
+PRODUCER = INTEGRATION_ID
 
 
-@dataclass(frozen=True)
+@dataclass
 class AdapterFailure(Exception):
     code: str
     phase: str
     message: str
+    sources: list[dict[str, str]] = field(default_factory=list)
+    profile_bindings: list[str] = field(default_factory=list)
+    targets: list[dict[str, str]] = field(default_factory=list)
 
     def __str__(self) -> str:
-        return f"{self.code} [{self.phase}] {self.message}"
+        return f"{self.code}: {self.message}"
 
-
-def source_ref(domain: str, identifier: str) -> dict[str, str]:
-    return {"domain": domain, "id": identifier}
-
-
-def target_ref(namespace: str, kind: str, identifier: str) -> dict[str, str]:
-    return {"namespace": namespace, "kind": kind, "id": identifier}
-
-
-def diagnostic(
-    *,
-    identifier: str,
-    phase: str,
-    severity: str,
-    code: str,
-    message: str,
-    sources: list[dict[str, str]] | None = None,
-    profile_bindings: list[str] | None = None,
-    targets: list[dict[str, str]] | None = None,
-) -> dict:
-    return {
-        "id": identifier,
-        "owner": "integration",
-        "producer": INTEGRATION_ID,
-        "phase": phase,
-        "severity": severity,
-        "code": code,
-        "message": message,
-        "sources": sources or [],
-        "profile_bindings": profile_bindings or [],
-        "targets": targets or [],
-    }
+    def as_diagnostic(self, diagnostic_id: str = "diag-001") -> dict[str, Any]:
+        return {
+            "id": diagnostic_id,
+            "owner": "integration",
+            "producer": PRODUCER,
+            "phase": self.phase,
+            "severity": "ERROR",
+            "code": self.code,
+            "message": self.message,
+            "sources": self.sources,
+            "profile_bindings": self.profile_bindings,
+            "targets": self.targets,
+        }
