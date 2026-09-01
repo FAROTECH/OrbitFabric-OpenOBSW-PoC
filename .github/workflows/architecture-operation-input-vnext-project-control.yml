@@ -1,0 +1,176 @@
+name: Architecture Lab operation-input vNext project control
+
+on:
+  push:
+    branches:
+      - architecture/operation-input-vnext-pressure-test
+  workflow_dispatch:
+
+jobs:
+  vnext-project-zero-input-control:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout vNext experiment
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Checkout pinned OrbitFabric Core
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric
+          ref: b1aa95408710f697b0ee144a7b41f2376395e01f
+          path: .work/orbitfabric-core
+
+      - name: Checkout accepted Stage 7 v0 control
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/OrbitFabric-OpenOBSW-PoC
+          ref: 70ced3581b4df9e200ae1f4e869f26451ec33b31
+          path: .work/stage7-v0-control
+
+      - name: Install Core, Stage 7 requirements and vNext package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./.work/orbitfabric-core
+          python -m pip install -r requirements-stage7.txt
+          python -m pip install -e '.[dev]'
+
+      - name: Assert lab vNext package identity and zero-input project
+        run: |
+          python - <<'PY'
+          import json
+          import shutil
+          from importlib.resources import files
+
+          manifest = json.loads(
+              files("integration_package").joinpath("integration_package.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          assert manifest["kind"] == "orbitfabric.integration_package"
+          assert manifest["manifest_version"] == "0.2-lab"
+          assert manifest["adapter"]["version"] == "0.2.0.dev1"
+          assert manifest["execution"]["protocol"] == "orbitfabric.adapter_cli.vnext-lab"
+          assert manifest["result_compatibility"] == {
+              "result_versions": ["0.2-lab"],
+              "default_result_version": "0.2-lab",
+          }
+          assert [item["id"] for item in manifest["operations"]] == ["project"]
+          assert manifest["operations"][0]["input_requirements"] == []
+          assert shutil.which("orbitfabric-openobsw-opensvf")
+          PY
+
+      - name: Run Stage 7 semantic regression plus vNext control tests
+        run: |
+          python -m pytest integration_package/tests -q \
+            -k 'not test_integration_package_manifest_truthfully_advertises_slice2'
+
+      - name: Export pinned Core Integration Input Set
+        run: |
+          rm -rf /tmp/orbitfabric-vnext
+          mkdir -p /tmp/orbitfabric-vnext/input
+          orbitfabric export integration-input-set \
+            orbitfabric_models/mission \
+            --output-dir /tmp/orbitfabric-vnext/input
+
+      - name: Execute installed vNext project with IISS and Profile only
+        run: |
+          orbitfabric-openobsw-opensvf run \
+            --operation project \
+            --input-set-manifest /tmp/orbitfabric-vnext/input/integration_input_manifest.json \
+            --profile "$GITHUB_WORKSPACE/projection_profiles/poc_openobsw_opensvf.yaml" \
+            --output-dir /tmp/orbitfabric-vnext/vnext-result
+
+      - name: Assert vNext Result zero-input provenance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(
+              Path('/tmp/orbitfabric-vnext/vnext-result/integration_result.json').read_text(
+                  encoding='utf-8'
+              )
+          )
+          assert result['kind'] == 'orbitfabric.integration_result'
+          assert result['result_version'] == '0.2-lab'
+          assert result['result'] == 'succeeded'
+          assert result['adapter']['version'] == '0.2.0.dev1'
+          assert result['operation']['id'] == 'project'
+          assert result['inputs']['core_input_set']['status'] == 'available'
+          assert result['inputs']['profile']['status'] == 'available'
+          assert result['inputs']['operation_inputs'] == []
+          assert result['coverage']['status'] == 'complete'
+          assert result['artifacts']
+          assert result['mappings']
+          PY
+
+      - name: Execute accepted v0 control on identical semantic inputs
+        env:
+          INPUT_MANIFEST: /tmp/orbitfabric-vnext/input/integration_input_manifest.json
+          V0_OUTPUT: /tmp/orbitfabric-vnext/v0-result
+        run: |
+          cd .work/stage7-v0-control
+          PYTHONPATH="$PWD" python integration_package/adapter_cli.py run \
+            --operation project \
+            --input-set-manifest "$INPUT_MANIFEST" \
+            --profile "$PWD/projection_profiles/poc_openobsw_opensvf.yaml" \
+            --output-dir "$V0_OUTPUT"
+
+      - name: Prove vNext project preserves v0 projection semantics
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/orbitfabric-vnext')
+          v0 = json.loads((root / 'v0-result/integration_result.json').read_text(encoding='utf-8'))
+          vn = json.loads((root / 'vnext-result/integration_result.json').read_text(encoding='utf-8'))
+
+          assert v0['result_version'] == '0.1-candidate'
+          assert vn['result_version'] == '0.2-lab'
+          assert v0['operation'] == vn['operation'] == {'id': 'project'}
+          assert vn['inputs']['operation_inputs'] == []
+
+          assert v0['capabilities'] == vn['capabilities']
+          assert v0['mappings'] == vn['mappings']
+          assert v0['resolutions'] == vn['resolutions']
+          assert v0['coverage'] == vn['coverage']
+
+          def artifact_semantics(result):
+              return [
+                  {
+                      'id': item['id'],
+                      'kind': item['kind'],
+                      'status': item['status'],
+                      'path': item['path'],
+                      'sha256': item['sha256'],
+                      'derived_from_mappings': item['derived_from_mappings'],
+                  }
+                  for item in result['artifacts']
+              ]
+
+          assert artifact_semantics(v0) == artifact_semantics(vn)
+          PY
+
+          diff -ru \
+            /tmp/orbitfabric-vnext/v0-result/flight_software \
+            /tmp/orbitfabric-vnext/vnext-result/flight_software
+          diff -ru \
+            /tmp/orbitfabric-vnext/v0-result/obsw_srdb_contribution \
+            /tmp/orbitfabric-vnext/vnext-result/obsw_srdb_contribution
+
+      - name: Retain O4 control evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: operation-input-vnext-project-control
+          path: |
+            /tmp/orbitfabric-vnext/input
+            /tmp/orbitfabric-vnext/v0-result
+            /tmp/orbitfabric-vnext/vnext-result
+          if-no-files-found: error
