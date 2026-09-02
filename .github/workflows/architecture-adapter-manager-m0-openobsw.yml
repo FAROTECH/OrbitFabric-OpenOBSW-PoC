@@ -27,13 +27,33 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Core M0 and build exact OpenOBSW wheel
+      - name: Install Core M0 and materialize complete Python wheel closure
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ./.work/orbitfabric-core
           rm -rf /tmp/orbitfabric-adapter-manager-openobsw
           mkdir -p /tmp/orbitfabric-adapter-manager-openobsw/wheels
-          python -m pip wheel . --no-deps -w /tmp/orbitfabric-adapter-manager-openobsw/wheels
+
+          # Materialize the exact Core M0 wheel plus its runtime closure.
+          python -m pip wheel \
+            ./.work/orbitfabric-core \
+            -w /tmp/orbitfabric-adapter-manager-openobsw/wheels
+
+          # Build only the exact adapter artifact. Its metadata now declares
+          # OrbitFabric Core as the runtime dependency required by Scenario validation.
+          python -m pip wheel \
+            . \
+            --no-deps \
+            -w /tmp/orbitfabric-adapter-manager-openobsw/wheels
+
+          python - <<'PY'
+          from pathlib import Path
+          wheelhouse = Path('/tmp/orbitfabric-adapter-manager-openobsw/wheels')
+          names = sorted(path.name for path in wheelhouse.glob('*.whl'))
+          assert any(name.startswith('orbitfabric-1.2.0-') for name in names), names
+          assert any(name.startswith('orbitfabric_openobsw_opensvf-0.2.0.dev2-') for name in names), names
+          print('\n'.join(names))
+          PY
 
       - name: Export authoritative Core Integration Input Set
         run: |
@@ -91,9 +111,11 @@ jobs:
           print(wheel)
           PY
 
-      - name: Install OpenOBSW through Core Adapter Manager
+      - name: Install OpenOBSW through Core Adapter Manager from exact local closure
         env:
           ORBITFABRIC_STATE_DIR: /tmp/orbitfabric-adapter-manager-openobsw/state
+          PIP_NO_INDEX: "1"
+          PIP_FIND_LINKS: /tmp/orbitfabric-adapter-manager-openobsw/wheels
         run: |
           WHEEL="$(find /tmp/orbitfabric-adapter-manager-openobsw/wheels -name 'orbitfabric_openobsw_opensvf-*.whl' -print -quit)"
           orbitfabric adapter install \
@@ -103,13 +125,25 @@ jobs:
             > /tmp/orbitfabric-adapter-manager-openobsw/install.json
           python - <<'PY'
           import json
+          import subprocess
           from pathlib import Path
+
           record = json.loads(Path('/tmp/orbitfabric-adapter-manager-openobsw/install.json').read_text())
           assert record['backend_id'] == 'python-wheel-managed-env'
           assert record['release_version'] == '0.2.0.dev2'
           assert record['source_coordinate']['name'] == 'openobsw-opensvf'
           assert Path(record['manifest_path']).is_file()
-          assert Path(record['execution_argv_prefix'][0]).is_file()
+          endpoint = Path(record['execution_argv_prefix'][0])
+          assert endpoint.is_file()
+
+          managed_python = endpoint.parents[1] / 'bin' / 'python'
+          completed = subprocess.run(
+              [str(managed_python), '-I', '-c', 'import orbitfabric; print(orbitfabric.__version__)'],
+              capture_output=True,
+              text=True,
+              check=True,
+          )
+          assert completed.stdout.strip() == '1.2.0'
           Path('/tmp/orbitfabric-adapter-manager-openobsw/instance-id.txt').write_text(record['instance_id'])
           PY
 
