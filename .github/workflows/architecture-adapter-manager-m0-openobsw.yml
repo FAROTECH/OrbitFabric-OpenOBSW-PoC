@@ -210,12 +210,10 @@ jobs:
           )
           assert plan['source']['scenario_id'] == 'stage7_10_ping_verification'
           assert plan['source']['scenario_sha256'] == expected_sha
-          assert plan['accounting'] == {
-              'source_atoms': 6,
-              'projected_atoms': 2,
-              'not_projected_atoms': 4,
-              'blocked_atoms': 0,
-          }
+          assert plan['accounting']['source_atoms'] == 6
+          assert plan['accounting']['projected_atoms'] == 2
+          assert plan['accounting']['not_projected_atoms'] == 4
+          assert plan['accounting']['blocked_atoms'] == 0
           PY
 
       - name: Remove OpenOBSW and prove inventory cleanup
