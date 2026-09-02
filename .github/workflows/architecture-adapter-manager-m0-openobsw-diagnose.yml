@@ -1,0 +1,93 @@
+name: Diagnose Adapter Manager OpenOBSW scenario runtime
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  diagnose-isolated-scenario-runtime:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric
+          ref: feat/adapter-manager-m0
+          path: .work/orbitfabric-core
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build and install exact adapter through M0
+        env:
+          ORBITFABRIC_STATE_DIR: /tmp/of-am-openobsw-diag/state
+        run: |
+          python -m pip install -e ./.work/orbitfabric-core
+          rm -rf /tmp/of-am-openobsw-diag
+          mkdir -p /tmp/of-am-openobsw-diag/wheels
+          python -m pip wheel . --no-deps -w /tmp/of-am-openobsw-diag/wheels
+          orbitfabric export integration-input-set orbitfabric_models/mission --output-dir /tmp/of-am-openobsw-diag/input
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path('/tmp/of-am-openobsw-diag')
+          wheel = next((root/'wheels').glob('orbitfabric_openobsw_opensvf-*.whl'))
+          manifest = Path('integration_package/integration_package.json')
+          sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          payload = {
+            'kind':'orbitfabric.adapter_release', 'descriptor_version':'0.1-candidate',
+            'source_coordinate':{'authority':'lab.orbitfabric.local','publisher':'lab','name':'openobsw-opensvf'},
+            'release_version':'0.2.0.dev2', 'source_provenance':{},
+            'artifacts':[{'id':'python-wheel','artifact_type':'python-wheel','filename':wheel.name,'sha256':sha(wheel),'size':wheel.stat().st_size,'selectors':{}}],
+            'integration_package':{'sha256':sha(manifest)},
+          }
+          (root/'release.json').write_text(json.dumps(payload, indent=2)+'\n')
+          PY
+          WHEEL="$(find /tmp/of-am-openobsw-diag/wheels -name '*.whl' -print -quit)"
+          orbitfabric adapter install /tmp/of-am-openobsw-diag/release.json --artifact "$WHEEL" --json > /tmp/of-am-openobsw-diag/install.json
+
+      - name: Prove installed endpoint cannot import Core runtime
+        run: |
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          record = json.loads(Path('/tmp/of-am-openobsw-diag/install.json').read_text())
+          endpoint = Path(record['execution_argv_prefix'][0])
+          python = endpoint.parents[1] / 'bin' / 'python'
+          completed = subprocess.run(
+              [str(python), '-I', '-c', 'import orbitfabric'],
+              capture_output=True,
+              text=True,
+          )
+          print('returncode:', completed.returncode)
+          print('stderr:', completed.stderr.strip())
+          assert completed.returncode != 0
+          assert 'orbitfabric' in completed.stderr
+          PY
+
+      - name: Prove direct installed Scenario execution fails for missing Core runtime
+        run: |
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          record = json.loads(Path('/tmp/of-am-openobsw-diag/install.json').read_text())
+          endpoint = record['execution_argv_prefix']
+          scenario = str(Path('orbitfabric_models/scenarios/stage7_10_ping_verification.yaml').resolve())
+          profile = str(Path('projection_profiles/poc_openobsw_opensvf.yaml').resolve())
+          argv = [
+              *endpoint, 'run', '--operation', 'verification_projection',
+              '--input-set-manifest', '/tmp/of-am-openobsw-diag/input/integration_input_manifest.json',
+              '--profile', profile,
+              '--operation-input', 'scenario', scenario,
+              '--output-dir', '/tmp/of-am-openobsw-diag/direct-output',
+          ]
+          completed = subprocess.run(argv, capture_output=True, text=True)
+          print('returncode:', completed.returncode)
+          print('stdout:', completed.stdout.strip())
+          print('stderr:', completed.stderr.strip())
+          result = json.loads(Path('/tmp/of-am-openobsw-diag/direct-output/integration_result.json').read_text())
+          print('diagnostic:', result['diagnostics'][0]['message'])
+          assert completed.returncode != 0
+          assert result['diagnostics'][0]['code'] == 'OFI-VPROJ-SCENARIO-001'
+          assert 'Core runtime is required' in result['diagnostics'][0]['message']
+          PY
