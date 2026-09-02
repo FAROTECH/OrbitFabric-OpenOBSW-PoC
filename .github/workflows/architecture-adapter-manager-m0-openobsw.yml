@@ -1,0 +1,215 @@
+name: Architecture Adapter Manager M0 OpenOBSW control
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  adapter-manager-m0-openobsw:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout OpenOBSW/OpenSVF adapter
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Core Adapter Manager branch
+        uses: actions/checkout@v4
+        with:
+          repository: FAROTECH/orbitfabric
+          ref: feat/adapter-manager-m0
+          path: .work/orbitfabric-core
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Core M0 and build exact OpenOBSW wheel
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./.work/orbitfabric-core
+          rm -rf /tmp/orbitfabric-adapter-manager-openobsw
+          mkdir -p /tmp/orbitfabric-adapter-manager-openobsw/wheels
+          python -m pip wheel . --no-deps -w /tmp/orbitfabric-adapter-manager-openobsw/wheels
+
+      - name: Export authoritative Core Integration Input Set
+        run: |
+          orbitfabric export integration-input-set \
+            "$GITHUB_WORKSPACE/orbitfabric_models/mission" \
+            --output-dir /tmp/orbitfabric-adapter-manager-openobsw/input
+
+      - name: Build exact Adapter Release Descriptor
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path('/tmp/orbitfabric-adapter-manager-openobsw')
+          wheel = next((root / 'wheels').glob('orbitfabric_openobsw_opensvf-*.whl'))
+          manifest = Path('integration_package/integration_package.json')
+
+          def sha256(path: Path) -> str:
+              digest = hashlib.sha256()
+              with path.open('rb') as stream:
+                  for block in iter(lambda: stream.read(1024 * 1024), b''):
+                      digest.update(block)
+              return digest.hexdigest()
+
+          descriptor = {
+              'kind': 'orbitfabric.adapter_release',
+              'descriptor_version': '0.1-candidate',
+              'source_coordinate': {
+                  'authority': 'lab.orbitfabric.local',
+                  'publisher': 'lab',
+                  'name': 'openobsw-opensvf',
+              },
+              'release_version': '0.2.0.dev2',
+              'source_provenance': {
+                  'repository': 'FAROTECH/OrbitFabric-OpenOBSW-PoC',
+                  'workflow_head_ref': os.environ.get('GITHUB_HEAD_REF', ''),
+              },
+              'artifacts': [
+                  {
+                      'id': 'python-wheel',
+                      'artifact_type': 'python-wheel',
+                      'filename': wheel.name,
+                      'sha256': sha256(wheel),
+                      'size': wheel.stat().st_size,
+                      'selectors': {'python': '>=3.10'},
+                  }
+              ],
+              'integration_package': {'sha256': sha256(manifest)},
+          }
+          path = root / 'release.json'
+          path.write_text(json.dumps(descriptor, indent=2) + '\n', encoding='utf-8')
+          print(path)
+          print(wheel)
+          PY
+
+      - name: Install OpenOBSW through Core Adapter Manager
+        env:
+          ORBITFABRIC_STATE_DIR: /tmp/orbitfabric-adapter-manager-openobsw/state
+        run: |
+          WHEEL="$(find /tmp/orbitfabric-adapter-manager-openobsw/wheels -name 'orbitfabric_openobsw_opensvf-*.whl' -print -quit)"
+          orbitfabric adapter install \
+            /tmp/orbitfabric-adapter-manager-openobsw/release.json \
+            --artifact "$WHEEL" \
+            --json \
+            > /tmp/orbitfabric-adapter-manager-openobsw/install.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          record = json.loads(Path('/tmp/orbitfabric-adapter-manager-openobsw/install.json').read_text())
+          assert record['backend_id'] == 'python-wheel-managed-env'
+          assert record['release_version'] == '0.2.0.dev2'
+          assert record['source_coordinate']['name'] == 'openobsw-opensvf'
+          assert Path(record['manifest_path']).is_file()
+          assert Path(record['execution_argv_prefix'][0]).is_file()
+          Path('/tmp/orbitfabric-adapter-manager-openobsw/instance-id.txt').write_text(record['instance_id'])
+          PY
+
+      - name: Verify installed OpenOBSW
+        env:
+          ORBITFABRIC_STATE_DIR: /tmp/orbitfabric-adapter-manager-openobsw/state
+        run: |
+          INSTANCE_ID="$(cat /tmp/orbitfabric-adapter-manager-openobsw/instance-id.txt)"
+          orbitfabric adapter verify "$INSTANCE_ID" --json \
+            > /tmp/orbitfabric-adapter-manager-openobsw/verify.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('/tmp/orbitfabric-adapter-manager-openobsw/verify.json').read_text())
+          for name in (
+              'release_descriptor_integrity',
+              'manifest_integrity',
+              'manifest_conformance',
+              'execution_binding',
+              'backend_materialization',
+          ):
+              assert report[name]['status'] == 'PASS', (name, report[name])
+          PY
+
+      - name: Execute Scenario operation through Adapter Manager
+        env:
+          ORBITFABRIC_STATE_DIR: /tmp/orbitfabric-adapter-manager-openobsw/state
+        run: |
+          INSTANCE_ID="$(cat /tmp/orbitfabric-adapter-manager-openobsw/instance-id.txt)"
+          orbitfabric adapter execute "$INSTANCE_ID" \
+            --operation verification_projection \
+            --input-set-manifest /tmp/orbitfabric-adapter-manager-openobsw/input/integration_input_manifest.json \
+            --profile "$GITHUB_WORKSPACE/projection_profiles/poc_openobsw_opensvf.yaml" \
+            --operation-input "scenario=$GITHUB_WORKSPACE/orbitfabric_models/scenarios/stage7_10_ping_verification.yaml" \
+            --output-dir /tmp/orbitfabric-adapter-manager-openobsw/output \
+            --json \
+            > /tmp/orbitfabric-adapter-manager-openobsw/execution.json
+
+      - name: Assert exact Scenario provenance and projection result
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          scenario = Path('orbitfabric_models/scenarios/stage7_10_ping_verification.yaml').resolve()
+          expected_sha = hashlib.sha256(scenario.read_bytes()).hexdigest()
+          result = json.loads(
+              Path('/tmp/orbitfabric-adapter-manager-openobsw/output/integration_result.json').read_text()
+          )
+          assert result['result'] == 'succeeded'
+          assert result['result_version'] == '0.2-candidate'
+          assert result['operation'] == {'id': 'verification_projection'}
+          assert result['adapter']['id'] == 'orbitfabric-openobsw-opensvf'
+          assert result['inputs']['operation_inputs'] == [{
+              'role': 'scenario',
+              'status': 'available',
+              'id': 'stage7_10_ping_verification',
+              'sha256': expected_sha,
+              'reason': None,
+          }]
+          plan = json.loads(
+              Path('/tmp/orbitfabric-adapter-manager-openobsw/output/verification_projection/verification_projection_plan.json').read_text()
+          )
+          assert plan['source']['scenario_id'] == 'stage7_10_ping_verification'
+          assert plan['source']['scenario_sha256'] == expected_sha
+          assert plan['accounting'] == {
+              'source_atoms': 6,
+              'projected_atoms': 2,
+              'not_projected_atoms': 4,
+              'blocked_atoms': 0,
+          }
+          PY
+
+      - name: Remove OpenOBSW and prove inventory cleanup
+        env:
+          ORBITFABRIC_STATE_DIR: /tmp/orbitfabric-adapter-manager-openobsw/state
+        run: |
+          INSTANCE_ID="$(cat /tmp/orbitfabric-adapter-manager-openobsw/instance-id.txt)"
+          orbitfabric adapter remove "$INSTANCE_ID" --json \
+            > /tmp/orbitfabric-adapter-manager-openobsw/remove.json
+          orbitfabric adapter list --json \
+            > /tmp/orbitfabric-adapter-manager-openobsw/final-inventory.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          assert json.loads(Path('/tmp/orbitfabric-adapter-manager-openobsw/final-inventory.json').read_text()) == []
+          PY
+
+      - name: Retain Adapter Manager OpenOBSW evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: adapter-manager-m0-openobsw
+          path: |
+            /tmp/orbitfabric-adapter-manager-openobsw/release.json
+            /tmp/orbitfabric-adapter-manager-openobsw/install.json
+            /tmp/orbitfabric-adapter-manager-openobsw/verify.json
+            /tmp/orbitfabric-adapter-manager-openobsw/execution.json
+            /tmp/orbitfabric-adapter-manager-openobsw/remove.json
+            /tmp/orbitfabric-adapter-manager-openobsw/final-inventory.json
+            /tmp/orbitfabric-adapter-manager-openobsw/output/integration_result.json
+            /tmp/orbitfabric-adapter-manager-openobsw/output/verification_projection/verification_projection_plan.json
+          if-no-files-found: error
